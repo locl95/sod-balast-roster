@@ -24,20 +24,7 @@ local HISTORY_LABELS = {
 
 local CLASS_ICON_TEXTURE = "Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES"
 
-local function openNameMenu(anchor, member)
-  if not anchor or not member or not member.name then
-    return
-  end
-
-  if UnitPopup_ShowMenu then
-    if not UI.blizzardDropdown then
-      UI.blizzardDropdown = CreateFrame("Frame", "SodBalastRosterBlizzardDropdown", UIParent, "UIDropDownMenuTemplate")
-    end
-
-    UnitPopup_ShowMenu(UI.blizzardDropdown, "PLAYER", nil, member.name)
-    return
-  end
-
+local function openFallbackMenu(anchor, member)
   local menu = {
     {
       text = member.name,
@@ -72,7 +59,7 @@ local function openNameMenu(anchor, member)
         if member.hasAddon then
           ns.Comm.QueueProfileRequest(member.name)
         else
-          ns.Who.QueueRequest(member.name)
+          ns.Who.RequestOneFromHardwareEvent(member.name)
         end
       end,
     },
@@ -83,6 +70,25 @@ local function openNameMenu(anchor, member)
   end
 
   EasyMenu(menu, UI.dropdown, anchor, 0, 0, "MENU")
+end
+
+local function openNameMenu(anchor, member)
+  if not anchor or not member or not member.name then
+    return
+  end
+
+  if UnitPopup_ShowMenu then
+    if not UI.blizzardDropdown then
+      UI.blizzardDropdown = CreateFrame("Frame", "SodBalastRosterBlizzardDropdown", UIParent, "UIDropDownMenuTemplate")
+    end
+
+    local ok = pcall(UnitPopup_ShowMenu, UI.blizzardDropdown, "PLAYER", nil, member.name)
+    if ok and UI.blizzardDropdown:IsShown() then
+      return
+    end
+  end
+
+  openFallbackMenu(anchor, member)
 end
 
 local function getClassColor(classFile)
@@ -331,6 +337,7 @@ function UI.Create()
   frame.refreshButton:SetScript("OnClick", function()
     ns.Channel.EnsureJoined()
     ns.Channel.ScanRoster()
+    ns.Who.RequestOneFromHardwareEvent()
     UI.Refresh()
   end)
 

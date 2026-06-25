@@ -39,7 +39,7 @@ local function getWhoInfo(index)
   if C_FriendList and C_FriendList.GetWhoInfo then
     local info = C_FriendList.GetWhoInfo(index)
     if info then
-      return info.fullName or info.name, info.guild, info.level, info.raceStr, info.filename or info.classFilename, info.zone
+      return info.fullName or info.name, info.fullGuildName, info.level, info.raceStr, info.filename, info.area
     end
   end
 
