@@ -470,10 +470,6 @@ function UI.Create()
     frame.rosterHeaders[#frame.rosterHeaders + 1] = label
   end
 
-  frame.historyHeader = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  frame.historyHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -96)
-  frame.historyHeader:SetText("Channel Chat")
-
   for index = 1, VISIBLE_ROWS do
     UI.rows[index] = createRow(frame, index)
   end
@@ -486,8 +482,8 @@ function UI.Create()
   end)
 
   frame.historyBox = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
-  frame.historyBox:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -120)
-  frame.historyBox:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -28, 72)
+  frame.historyBox:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -96)
+  frame.historyBox:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -28, 68)
 
   frame.historyText = CreateFrame("EditBox", nil, frame.historyBox)
   frame.historyText:SetMultiLine(true)
@@ -503,7 +499,7 @@ function UI.Create()
 
   frame.chatInput = CreateFrame("EditBox", nil, frame, "InputBoxTemplate")
   frame.chatInput:SetSize(780, 20)
-  frame.chatInput:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 16, 42)
+  frame.chatInput:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 16, 34)
   frame.chatInput:SetAutoFocus(false)
   frame.chatInput:SetTextInsets(6, 6, 0, 0)
   frame.chatInput:SetScript("OnEnterPressed", function(self)
@@ -586,8 +582,6 @@ function UI.RefreshHistory()
   local frame = UI.Create()
   local lines = {}
   local entries = ns.History.GetEntries()
-  local previousScroll = frame.historyBox:GetVerticalScroll() or 0
-
   for index = 1, #entries do
     local entry = entries[index]
     if entry.type == "channel_message" then
@@ -600,8 +594,8 @@ function UI.RefreshHistory()
   frame.historyText:SetHeight(math.max(1, math.max(#lines, 1) * 14))
 
   local maxScroll = math.max(0, frame.historyText:GetHeight() - frame.historyBox:GetHeight())
-  frame.historyBox:SetVerticalScroll(math.min(previousScroll, maxScroll))
-  frame.status:SetText(string.format("Chat messages %d", #lines))
+  frame.historyBox:SetVerticalScroll(maxScroll)
+  frame.status:SetText("")
 end
 
 function UI.Refresh()
@@ -622,7 +616,6 @@ function UI.Refresh()
   frame.searchBox:SetShown(rosterSelected)
   frame.refreshButton:SetShown(rosterSelected)
   frame.debugButton:SetShown(rosterSelected)
-  frame.historyHeader:SetShown(not rosterSelected)
   frame.chatInput:SetShown(not rosterSelected)
   for _, header in ipairs(frame.rosterHeaders) do
     header:SetShown(rosterSelected)
