@@ -9,6 +9,9 @@ ns.Constants = {
   scanInterval = 30,
   requestInterval = 1,
   profileTTL = 15 * 60,
+  historySyncCooldown = 60,
+  historySyncWindow = 24 * 60 * 60,
+  historySyncLimit = 50,
   maxHistoryEntries = 500,
 }
 
@@ -123,6 +126,24 @@ function Utils.IsTargetChannel(channelName, channelBaseName)
   end
 
   return string.find(full, target, 1, true) ~= nil
+end
+
+function Utils.EscapeField(value)
+  value = tostring(value or "")
+  value = value:gsub("%%", "%%25")
+  value = value:gsub(";", "%%3B")
+  value = value:gsub("\n", "%%0A")
+  value = value:gsub("\r", "%%0D")
+  return value
+end
+
+function Utils.UnescapeField(value)
+  value = tostring(value or "")
+  value = value:gsub("%%0D", "\r")
+  value = value:gsub("%%0A", "\n")
+  value = value:gsub("%%3B", ";")
+  value = value:gsub("%%25", "%%")
+  return value
 end
 
 function Utils.Print(message)

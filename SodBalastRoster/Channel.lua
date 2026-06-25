@@ -99,6 +99,10 @@ function Channel.ScanRoster()
       if member and member.name ~= Utils.PlayerName() and Store.ShouldRequestProfile(member, timestamp) then
         ns.Comm.QueueProfileRequest(member.name)
       end
+
+      if member and member.name ~= Utils.PlayerName() and Store.ShouldRequestHistory(member, timestamp) then
+        ns.Comm.QueueHistoryRequest(member.name)
+      end
     end
   end
 

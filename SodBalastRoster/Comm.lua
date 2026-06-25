@@ -6,7 +6,7 @@ local History = ns.History
 local Comm = {
   queue = {},
   queued = {},
-  lastRequestAt = 0,
+  lastSendAt = 0,
 }
 ns.Comm = Comm
 
@@ -32,23 +32,57 @@ local function sendAddonWhisper(payload, target)
   end
 end
 
-function Comm.QueueProfileRequest(name)
-  name = Utils.NormalizeName(name)
-  if not name or Comm.queued[name] then
+local function queueMessage(target, payload, key)
+  target = Utils.NormalizeName(target)
+  if not target or not payload then
     return
   end
 
-  Comm.queued[name] = true
-  Comm.queue[#Comm.queue + 1] = name
+  key = key or string.format("%s|%s", target, payload)
+  if Comm.queued[key] then
+    return
+  end
+
+  Comm.queued[key] = true
+  Comm.queue[#Comm.queue + 1] = {
+    target = target,
+    payload = payload,
+    key = key,
+  }
 end
 
-function Comm.SendRequest(name)
+local function encodeHistoryEntry(entry)
+  return table.concat({
+    "HEVT",
+    ns.Constants.protocolVersion,
+    Utils.EscapeField(entry.id),
+    tostring(entry.at or 0),
+    Utils.EscapeField(entry.source or ""),
+    Utils.EscapeField(entry.name or ""),
+    Utils.EscapeField(entry.type or ""),
+    Utils.EscapeField(entry.details or ""),
+  }, ";")
+end
+
+function Comm.QueueProfileRequest(name)
+  name = Utils.NormalizeName(name)
   if not name or name == Utils.PlayerName() then
     return
   end
 
   Store.MarkProfileRequested(name, Utils.Now())
-  sendAddonWhisper("REQ;1", name)
+  queueMessage(name, "REQ;1", "REQ|" .. name)
+end
+
+function Comm.QueueHistoryRequest(name)
+  name = Utils.NormalizeName(name)
+  if not name or name == Utils.PlayerName() then
+    return
+  end
+
+  local sinceAt = Store.GetHistorySyncAt(name)
+  Store.MarkHistoryRequested(name, Utils.Now())
+  queueMessage(name, string.format("HREQ;%s;%s", ns.Constants.protocolVersion, tostring(sinceAt)), "HREQ|" .. name)
 end
 
 function Comm.SendInfo(target)
@@ -92,20 +126,27 @@ function Comm.BroadcastBye()
   end
 end
 
+function Comm.SendHistorySince(target, sinceAt)
+  local events = History.ExportRecentSince(sinceAt, ns.Constants.historySyncLimit)
+  for index, entry in ipairs(events) do
+    queueMessage(target, encodeHistoryEntry(entry), string.format("HEVT|%s|%s", target, entry.id or index))
+  end
+end
+
 function Comm.FlushQueue()
   if #Comm.queue == 0 then
     return
   end
 
   local now = Utils.Now()
-  if now - Comm.lastRequestAt < ns.Constants.requestInterval then
+  if now - Comm.lastSendAt < ns.Constants.requestInterval then
     return
   end
 
-  local target = table.remove(Comm.queue, 1)
-  Comm.queued[target] = nil
-  Comm.lastRequestAt = now
-  Comm.SendRequest(target)
+  local item = table.remove(Comm.queue, 1)
+  Comm.queued[item.key] = nil
+  Comm.lastSendAt = now
+  sendAddonWhisper(item.payload, item.target)
 end
 
 function Comm.HandleInfo(parts, sender)
@@ -119,7 +160,7 @@ function Comm.HandleInfo(parts, sender)
   local existing = Store.GetMember(name)
   local hadAddon = existing and existing.hasAddon or false
   local hadProfile = existing and (existing.lastProfileAt or 0) > 0 or false
-  local _, changes = Store.SetProfile(name, {
+  local member, changes = Store.SetProfile(name, {
     level = parts[4],
     classFile = parts[5],
     zone = parts[6],
@@ -127,6 +168,9 @@ function Comm.HandleInfo(parts, sender)
   }, Utils.Now())
 
   if not changes then
+    if member and Store.ShouldRequestHistory(member, Utils.Now()) then
+      Comm.QueueHistoryRequest(name)
+    end
     return
   end
 
@@ -143,6 +187,34 @@ function Comm.HandleInfo(parts, sender)
   if changes.guildName then
     History.Add("guild_changed", name, string.format("%s -> %s", changes.guildName.old or "", changes.guildName.new or ""))
   end
+
+  if member and Store.ShouldRequestHistory(member, Utils.Now()) then
+    Comm.QueueHistoryRequest(name)
+  end
+end
+
+function Comm.HandleHistoryRequest(parts, sender)
+  local sinceAt = tonumber(parts[3]) or 0
+  Comm.SendHistorySince(sender, sinceAt)
+end
+
+function Comm.HandleHistoryEvent(parts, sender)
+  local entry = {
+    id = Utils.UnescapeField(parts[3]),
+    at = tonumber(parts[4]) or 0,
+    source = Utils.UnescapeField(parts[5]),
+    name = Utils.UnescapeField(parts[6]),
+    type = Utils.UnescapeField(parts[7]),
+    details = Utils.UnescapeField(parts[8]),
+  }
+
+  local _, added = History.AddImported(entry)
+  if added then
+    Store.MarkHistorySynced(sender, entry.at)
+    return
+  end
+
+  Store.MarkHistorySynced(sender, entry.at)
 end
 
 function Comm.HandleAddonMessage(prefix, text, _, sender)
@@ -169,6 +241,16 @@ function Comm.HandleAddonMessage(prefix, text, _, sender)
 
   if messageType == "INFO" then
     Comm.HandleInfo(parts, senderName)
+    return
+  end
+
+  if messageType == "HREQ" then
+    Comm.HandleHistoryRequest(parts, senderName)
+    return
+  end
+
+  if messageType == "HEVT" then
+    Comm.HandleHistoryEvent(parts, senderName)
     return
   end
 

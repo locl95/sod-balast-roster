@@ -7,6 +7,9 @@ ns.Store = Store
 local defaults = {
   roster = {},
   history = {},
+  historyMeta = {
+    nextSequence = 1,
+  },
   ui = {
     point = "CENTER",
     x = 0,
@@ -59,6 +62,8 @@ function Store.GetMember(name)
     firstSeenAt = 0,
     lastSeenAt = 0,
     lastProfileAt = 0,
+    lastHistorySyncAt = 0,
+    lastHistoryRequestedAt = 0,
     level = 0,
     classFile = "",
     zone = "",
@@ -173,6 +178,37 @@ function Store.MarkProfileRequested(name, timestamp)
   local member = Store.GetMember(name)
   if member then
     member.lastRequestedAt = timestamp
+  end
+end
+
+function Store.ShouldRequestHistory(member, timestamp)
+  if not member or not member.hasAddon then
+    return false
+  end
+
+  return timestamp - (member.lastHistoryRequestedAt or 0) >= ns.Constants.historySyncCooldown
+end
+
+function Store.MarkHistoryRequested(name, timestamp)
+  local member = Store.GetMember(name)
+  if member then
+    member.lastHistoryRequestedAt = timestamp
+  end
+end
+
+function Store.GetHistorySyncAt(name)
+  local member = Store.GetMember(name)
+  if not member then
+    return 0
+  end
+
+  return member.lastHistorySyncAt or 0
+end
+
+function Store.MarkHistorySynced(name, timestamp)
+  local member = Store.GetMember(name)
+  if member and timestamp and timestamp > (member.lastHistorySyncAt or 0) then
+    member.lastHistorySyncAt = timestamp
   end
 end
 

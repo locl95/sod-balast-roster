@@ -80,6 +80,7 @@ end
 
 local function initialize()
   ns.Store.Init()
+  ns.History.Init()
   ns.Store.SetProfile(ns.Utils.PlayerName(), {
     level = ns.Utils.SafeLevel(),
     classFile = ns.Utils.SafeClassFile(),
