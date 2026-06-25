@@ -61,13 +61,13 @@ function Who.QueueRequest(name)
   Who.queue[#Who.queue + 1] = name
 end
 
-function Who.FlushQueue()
+function Who.FlushQueue(force)
   if Who.activeName or #Who.queue == 0 then
     return
   end
 
   local now = Utils.Now()
-  if now - Who.lastSendAt < ns.Constants.whoRequestInterval then
+  if not force and now - Who.lastSendAt < ns.Constants.whoRequestInterval then
     return
   end
 
@@ -77,7 +77,28 @@ function Who.FlushQueue()
   Who.activeAt = now
   Who.lastSendAt = now
   Store.MarkWhoRequested(name, now)
-  sendWho("n-" .. name)
+  sendWho(string.format('n-"%s"', name))
+end
+
+function Who.QueueVisibleFallbacks()
+  local now = Utils.Now()
+  local visible = Store.GetVisibleRoster()
+
+  for _, member in ipairs(visible) do
+    if member.name ~= Utils.PlayerName() and Store.ShouldRequestWho(member, now) then
+      Who.QueueRequest(member.name)
+    end
+  end
+end
+
+function Who.RequestOneFromHardwareEvent(name)
+  if name then
+    Who.QueueRequest(name)
+  else
+    Who.QueueVisibleFallbacks()
+  end
+
+  Who.FlushQueue(true)
 end
 
 function Who.HandleWhoListUpdate()

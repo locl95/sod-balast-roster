@@ -77,17 +77,6 @@ local function openNameMenu(anchor, member)
     return
   end
 
-  if UnitPopup_ShowMenu then
-    if not UI.blizzardDropdown then
-      UI.blizzardDropdown = CreateFrame("Frame", "SodBalastRosterBlizzardDropdown", UIParent, "UIDropDownMenuTemplate")
-    end
-
-    local ok = pcall(UnitPopup_ShowMenu, UI.blizzardDropdown, "PLAYER", nil, member.name)
-    if ok and UI.blizzardDropdown:IsShown() then
-      return
-    end
-  end
-
   openFallbackMenu(anchor, member)
 end
 
@@ -182,26 +171,6 @@ local function createRow(parent, index)
 
   row.name = createLabel(row, 150, "LEFT")
   row.name:SetPoint("LEFT", row.addon, "RIGHT", 4, 0)
-
-  row.nameButton = CreateFrame("Button", nil, row)
-  row.nameButton:SetPoint("TOPLEFT", row.name, "TOPLEFT", 0, 0)
-  row.nameButton:SetPoint("BOTTOMRIGHT", row.name, "BOTTOMRIGHT", 0, 0)
-  row.nameButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-  row.nameButton:SetScript("OnClick", function(self, button)
-    if not row.member then
-      return
-    end
-
-    if button == "RightButton" then
-      openNameMenu(self, row.member)
-    end
-  end)
-  row.nameButton:SetScript("OnEnter", function()
-    row.highlight:Show()
-  end)
-  row.nameButton:SetScript("OnLeave", function()
-    row.highlight:Hide()
-  end)
 
   row.level = createLabel(row, 40, "LEFT")
   row.level:SetPoint("LEFT", row.name, "RIGHT", 4, 0)
