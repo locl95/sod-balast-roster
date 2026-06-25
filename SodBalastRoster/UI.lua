@@ -91,6 +91,7 @@ local function ensureContextMenu()
     button:SetSize(146, 20)
     button:SetPoint("TOPLEFT", menu, "TOPLEFT", 10, -26 - ((index - 1) * 24))
     button:SetText(action.text)
+    button.actionKey = action.key
     button:SetScript("OnClick", function()
       runMenuAction(action.key, menu.member)
     end)
@@ -111,6 +112,14 @@ local function openFallbackMenu(anchor, member)
   local menu = ensureContextMenu()
   menu.member = member
   menu.title:SetText(member.name or "?")
+
+  for _, button in ipairs(menu.buttons) do
+    if button.actionKey == "refresh" then
+      button:SetShown(not member.hasAddon)
+    else
+      button:SetShown(true)
+    end
+  end
 
   local scale = UIParent:GetEffectiveScale()
   local x, y = GetCursorPosition()

@@ -11,6 +11,12 @@ local Who = {
 ns.Who = Who
 
 local function sendWho(query)
+  if C_FriendList and C_FriendList.SetWhoToUi then
+    C_FriendList.SetWhoToUi(true)
+  elseif SetWhoToUI then
+    SetWhoToUI(1)
+  end
+
   if C_FriendList and C_FriendList.SendWho then
     C_FriendList.SendWho(query)
     return
@@ -150,6 +156,7 @@ end
 
 function Who.CheckTimeout()
   if Who.activeName and Utils.Now() - Who.activeAt >= 10 then
+    ns.Utils.Print("who timeout: " .. tostring(Who.activeName))
     Who.activeName = nil
     Who.activeAt = 0
   end
