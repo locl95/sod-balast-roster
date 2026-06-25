@@ -96,6 +96,67 @@ function Utils.SafeProfessions()
   return profession1, profession2
 end
 
+function Utils.DebugProfessions()
+  local lines = {}
+  local primary1, primary2, archaeology, fishing, cooking = GetProfessions()
+
+  lines[#lines + 1] = string.format(
+    "GetProfessions p1=%s p2=%s arch=%s fish=%s cook=%s",
+    tostring(primary1),
+    tostring(primary2),
+    tostring(archaeology),
+    tostring(fishing),
+    tostring(cooking)
+  )
+
+  if GetProfessionInfo then
+    if primary1 then
+      local name1, _, skill1, max1, _, _, skillLine1 = GetProfessionInfo(primary1)
+      lines[#lines + 1] = string.format(
+        "Profession1 name=%s skill=%s/%s skillLine=%s",
+        tostring(name1),
+        tostring(skill1),
+        tostring(max1),
+        tostring(skillLine1)
+      )
+    end
+
+    if primary2 then
+      local name2, _, skill2, max2, _, _, skillLine2 = GetProfessionInfo(primary2)
+      lines[#lines + 1] = string.format(
+        "Profession2 name=%s skill=%s/%s skillLine=%s",
+        tostring(name2),
+        tostring(skill2),
+        tostring(max2),
+        tostring(skillLine2)
+      )
+    end
+  end
+
+  if GetNumSkillLines and GetSkillLineInfo then
+    local count = GetNumSkillLines()
+    lines[#lines + 1] = string.format("GetNumSkillLines=%s", tostring(count))
+
+    for index = 1, count do
+      local skillName, isHeader, isExpanded, skillRank, _, _, skillMaxRank = GetSkillLineInfo(index)
+      lines[#lines + 1] = string.format(
+        "SkillLine[%d] name=%s header=%s expanded=%s rank=%s/%s",
+        index,
+        tostring(skillName),
+        tostring(isHeader),
+        tostring(isExpanded),
+        tostring(skillRank),
+        tostring(skillMaxRank)
+      )
+    end
+  end
+
+  local prof1, prof2 = Utils.SafeProfessions()
+  lines[#lines + 1] = string.format("SafeProfessions=%s / %s", tostring(prof1), tostring(prof2))
+
+  return lines
+end
+
 function Utils.SplitMessage(message, separator)
   local parts = {}
   if not message or message == "" then

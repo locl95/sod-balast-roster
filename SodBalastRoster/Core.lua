@@ -63,6 +63,10 @@ local function runDebug()
     if status.lastFallbackPlayer then
       ns.Utils.Print("fallback candidate: " .. tostring(status.lastFallbackPlayer))
     end
+
+    for _, line in ipairs(ns.Utils.DebugProfessions()) do
+      ns.Utils.Print(line)
+    end
   end)
 
   if not ok then
