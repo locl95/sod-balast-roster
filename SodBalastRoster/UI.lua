@@ -69,9 +69,10 @@ local function openFallbackMenu(anchor, member)
 
   if not UI.dropdown then
     UI.dropdown = CreateFrame("Frame", "SodBalastRosterDropdown", UIParent, "UIDropDownMenuTemplate")
+    UI.dropdown:SetFrameStrata("FULLSCREEN_DIALOG")
   end
 
-  EasyMenu(menu, UI.dropdown, anchor, 0, 0, "MENU")
+  EasyMenu(menu, UI.dropdown, "cursor", 0, 0, "MENU", 2)
 end
 
 local function openNameMenu(anchor, member)
@@ -198,7 +199,7 @@ local function createRow(parent, index)
     self.highlight:Hide()
   end)
 
-  row:SetScript("OnClick", function(self, button)
+  row:SetScript("OnMouseUp", function(self, button)
     if not self.member then
       return
     end
