@@ -165,6 +165,16 @@ function UI.Create()
     UI.Refresh()
   end)
 
+  frame.debugButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+  frame.debugButton:SetSize(70, 20)
+  frame.debugButton:SetPoint("LEFT", frame.refreshButton, "RIGHT", 8, 0)
+  frame.debugButton:SetText("Debug")
+  frame.debugButton:SetScript("OnClick", function()
+    if ns.Core and ns.Core.RunDebug then
+      ns.Core.RunDebug()
+    end
+  end)
+
   frame.status = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   frame.status:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -40)
   frame.status:SetText("")

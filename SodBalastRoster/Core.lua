@@ -15,30 +15,36 @@ local function safeCreateUI()
   return result
 end
 
+local function runDebug()
+  ns.Channel.EnsureJoined()
+  local ok, reason = ns.Channel.ScanRoster()
+  local status = ns.Channel.DebugStatus()
+  ns.Utils.Print(string.format(
+    "debug channelId=%s displayIndex=%s visibleCount=%s memberCount=%s resolvedCount=%s scanOk=%s reason=%s",
+    tostring(status.channelId),
+    tostring(status.displayIndex),
+    tostring(status.visibleCount),
+    tostring(status.lastMemberCount),
+    tostring(status.lastResolvedCount),
+    tostring(ok),
+    tostring(reason)
+  ))
+  if status.lastResolvedNames and #status.lastResolvedNames > 0 then
+    ns.Utils.Print("resolved names: " .. table.concat(status.lastResolvedNames, ", "))
+  end
+  if status.lastFallbackPlayer then
+    ns.Utils.Print("fallback candidate: " .. tostring(status.lastFallbackPlayer))
+  end
+  refreshUI()
+end
+
+Core.RunDebug = runDebug
+
 local function handleSlashCommand(message)
   message = ns.Utils.Trim(message or "")
 
   if message == "debug" then
-    ns.Channel.EnsureJoined()
-    local ok, reason = ns.Channel.ScanRoster()
-    local status = ns.Channel.DebugStatus()
-    ns.Utils.Print(string.format(
-      "debug channelId=%s displayIndex=%s visibleCount=%s memberCount=%s resolvedCount=%s scanOk=%s reason=%s",
-      tostring(status.channelId),
-      tostring(status.displayIndex),
-      tostring(status.visibleCount),
-      tostring(status.lastMemberCount),
-      tostring(status.lastResolvedCount),
-      tostring(ok),
-      tostring(reason)
-    ))
-    if status.lastResolvedNames and #status.lastResolvedNames > 0 then
-      ns.Utils.Print("resolved names: " .. table.concat(status.lastResolvedNames, ", "))
-    end
-    if status.lastFallbackPlayer then
-      ns.Utils.Print("fallback candidate: " .. tostring(status.lastFallbackPlayer))
-    end
-    refreshUI()
+    runDebug()
     return
   end
 
@@ -68,6 +74,7 @@ local function initialize()
 
   SLASH_SODBALASTROSTER1 = "/sb"
   SLASH_SODBALASTROSTER2 = "/sbr"
+  SLASH_SODBALASTROSTER3 = "/sbd"
   SlashCmdList.SODBALASTROSTER = function(message)
     handleSlashCommand(message)
   end
