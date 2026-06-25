@@ -269,7 +269,11 @@ function UI.RefreshRoster()
     end
   end
 
-  frame.status:SetText(string.format("Online %d  Addon %d  Total %d", online, withAddon, total))
+  local statusText = string.format("Online %d  Addon %d  Total %d", online, withAddon, total)
+  if ns.Core and ns.Core.lastDebugSummary then
+    statusText = statusText .. "  |  " .. ns.Core.lastDebugSummary
+  end
+  frame.status:SetText(statusText)
 
   if total == 0 then
     frame.emptyState:Show()

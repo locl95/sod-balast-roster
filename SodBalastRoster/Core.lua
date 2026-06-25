@@ -16,10 +16,11 @@ local function safeCreateUI()
 end
 
 local function runDebug()
+  ns.Utils.Print("running debug scan")
   ns.Channel.EnsureJoined()
   local ok, reason = ns.Channel.ScanRoster()
   local status = ns.Channel.DebugStatus()
-  ns.Utils.Print(string.format(
+  local summary = string.format(
     "debug channelId=%s displayIndex=%s visibleCount=%s memberCount=%s resolvedCount=%s scanOk=%s reason=%s",
     tostring(status.channelId),
     tostring(status.displayIndex),
@@ -28,6 +29,12 @@ local function runDebug()
     tostring(status.lastResolvedCount),
     tostring(ok),
     tostring(reason)
+  )
+
+  Core.lastDebugSummary = summary
+  ns.Utils.Print(string.format(
+    "%s",
+    summary
   ))
   if status.lastResolvedNames and #status.lastResolvedNames > 0 then
     ns.Utils.Print("resolved names: " .. table.concat(status.lastResolvedNames, ", "))
@@ -74,13 +81,17 @@ local function initialize()
 
   SLASH_SODBALASTROSTER1 = "/sb"
   SLASH_SODBALASTROSTER2 = "/sbr"
-  SLASH_SODBALASTROSTER3 = "/sbd"
   SlashCmdList.SODBALASTROSTER = function(message)
     handleSlashCommand(message)
   end
 
+  SLASH_SODBALASTROSTERDEBUG1 = "/sbd"
+  SlashCmdList.SODBALASTROSTERDEBUG = function()
+    runDebug()
+  end
+
   ns.Channel.EnsureJoined()
-  ns.Utils.Print("loaded. Use /sb to open, /sb debug for channel diagnostics.")
+  ns.Utils.Print("loaded. Use /sb to open, /sbd or Debug for channel diagnostics.")
   C_Timer.After(2, function()
     ns.Channel.ScanRoster()
     refreshUI()
