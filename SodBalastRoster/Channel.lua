@@ -5,6 +5,8 @@ local Store = ns.Store
 local History = ns.History
 local Channel = {
   lastScanAt = 0,
+  lastScanOk = false,
+  lastScanReason = "not_scanned",
 }
 ns.Channel = Channel
 
@@ -27,10 +29,11 @@ function Channel.GetChannelId()
 end
 
 function Channel.FindDisplayIndex()
+  local channelId = Channel.GetChannelId()
   local count = GetNumDisplayChannels and GetNumDisplayChannels() or 0
   for index = 1, count do
-    local name, header = GetChannelDisplayInfo(index)
-    if not header and name == ns.Constants.channelName then
+    local name, header, _, channelNumber = GetChannelDisplayInfo(index)
+    if not header and (name == ns.Constants.channelName or channelNumber == channelId) then
       return index
     end
   end
@@ -43,7 +46,13 @@ function Channel.ScanRoster()
 
   local displayIndex = Channel.FindDisplayIndex()
   if not displayIndex then
+    Channel.lastScanOk = false
+    Channel.lastScanReason = "channel_not_visible"
     return false, "channel_not_visible"
+  end
+
+  if SetSelectedDisplayChannel then
+    SetSelectedDisplayChannel(displayIndex)
   end
 
   local _, _, _, _, memberCount = GetChannelDisplayInfo(displayIndex)
@@ -71,6 +80,8 @@ function Channel.ScanRoster()
     History.Add("left_channel", member.name)
   end
 
+  Channel.lastScanOk = true
+  Channel.lastScanReason = nil
   return true, nil
 end
 
@@ -92,5 +103,7 @@ function Channel.DebugStatus()
     displayIndex = displayIndex,
     visibleCount = visibleCount,
     lastScanAt = Channel.lastScanAt,
+    lastScanOk = Channel.lastScanOk,
+    lastScanReason = Channel.lastScanReason,
   }
 end

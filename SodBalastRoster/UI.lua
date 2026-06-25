@@ -109,7 +109,6 @@ function UI.Create()
   frame:SetSize(state.width or 860, state.height or 420)
   frame:SetPoint(state.point or "CENTER", UIParent, state.relativePoint or state.point or "CENTER", state.x or 0, state.y or 0)
   frame:SetMovable(true)
-  frame:SetResizable(true)
   frame:EnableMouse(true)
   frame:RegisterForDrag("LeftButton")
   frame:SetScript("OnDragStart", frame.StartMoving)
@@ -117,7 +116,6 @@ function UI.Create()
     self:StopMovingOrSizing()
     Store.SaveFramePosition(self)
   end)
-  frame:SetMinResize(860, 420)
   frame:Hide()
 
   frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -170,6 +168,13 @@ function UI.Create()
   frame.status = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   frame.status:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -40)
   frame.status:SetText("")
+
+  frame.emptyState = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  frame.emptyState:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -116)
+  frame.emptyState:SetPoint("RIGHT", frame, "RIGHT", -40, 0)
+  frame.emptyState:SetJustifyH("LEFT")
+  frame.emptyState:SetJustifyV("TOP")
+  frame.emptyState:SetText("")
 
   local headers = {
     { text = "On", x = 12, width = 28 },
@@ -226,6 +231,7 @@ function UI.RefreshRoster()
   local data = Store.GetVisibleRoster()
   local total = #data
   local offset = FauxScrollFrame_GetOffset(frame.scrollFrame)
+  local channelStatus = ns.Channel.DebugStatus()
 
   FauxScrollFrame_Update(frame.scrollFrame, total, VISIBLE_ROWS, ROW_HEIGHT)
 
@@ -254,6 +260,20 @@ function UI.RefreshRoster()
   end
 
   frame.status:SetText(string.format("Online %d  Addon %d  Total %d", online, withAddon, total))
+
+  if total == 0 then
+    frame.emptyState:Show()
+    frame.emptyState:SetText(string.format(
+      "No hay miembros visibles en el roster local.\n\nCanal ID: %s\nDisplay Index: %s\nVisible Count: %s\nLast Scan OK: %s\nReason: %s\n\nPrueba `/sb debug` y pulsa `Refresh` dentro de SODBALAST.",
+      tostring(channelStatus.channelId),
+      tostring(channelStatus.displayIndex),
+      tostring(channelStatus.visibleCount),
+      tostring(channelStatus.lastScanOk),
+      tostring(channelStatus.lastScanReason)
+    ))
+  else
+    frame.emptyState:Hide()
+  end
 end
 
 function UI.RefreshHistory()
@@ -290,10 +310,12 @@ function UI.Refresh()
 
   frame.scrollFrame:SetShown(rosterSelected)
   frame.historyBox:SetShown(not rosterSelected)
+  frame.emptyState:SetShown(rosterSelected)
 
   if rosterSelected then
     UI.RefreshRoster()
   else
+    frame.emptyState:Hide()
     UI.RefreshHistory()
   end
 end
