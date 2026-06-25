@@ -70,6 +70,29 @@ function Utils.SafeProfessions()
     profession2 = GetProfessionInfo(primary2) or ""
   end
 
+  if profession1 ~= "" or profession2 ~= "" then
+    return profession1, profession2
+  end
+
+  if GetNumSkillLines and GetSkillLineInfo then
+    local currentHeader = nil
+    local professions = {}
+
+    for index = 1, GetNumSkillLines() do
+      local skillName, isHeader = GetSkillLineInfo(index)
+      if isHeader then
+        currentHeader = skillName
+      elseif currentHeader == TRADE_SKILLS and skillName and skillName ~= "" then
+        professions[#professions + 1] = skillName
+        if #professions >= 2 then
+          break
+        end
+      end
+    end
+
+    return professions[1] or "", professions[2] or ""
+  end
+
   return profession1, profession2
 end
 
