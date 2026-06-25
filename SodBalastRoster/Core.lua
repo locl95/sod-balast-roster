@@ -6,6 +6,24 @@ ns.version = "0.1.2"
 
 local refreshUI
 
+local function refreshLocalProfile(shouldBroadcast)
+  local profession1, profession2 = ns.Utils.SafeProfessions()
+  local _, changes = ns.Store.SetProfile(ns.Utils.PlayerName(), {
+    level = ns.Utils.SafeLevel(),
+    classFile = ns.Utils.SafeClassFile(),
+    zone = ns.Utils.SafeZoneName(),
+    guildName = ns.Utils.SafeGuildName(),
+    profession1 = profession1,
+    profession2 = profession2,
+  }, ns.Utils.Now())
+
+  if shouldBroadcast and changes then
+    ns.Comm.BroadcastInfo()
+  end
+
+  return changes
+end
+
 local function safeCreateUI()
   local ok, result = pcall(ns.UI.Create)
   if not ok then
@@ -81,16 +99,9 @@ end
 
 local function initialize()
   ns.Store.Init()
+  ns.Store.ResetTransientState()
   ns.History.Init()
-  local profession1, profession2 = ns.Utils.SafeProfessions()
-  ns.Store.SetProfile(ns.Utils.PlayerName(), {
-    level = ns.Utils.SafeLevel(),
-    classFile = ns.Utils.SafeClassFile(),
-    zone = ns.Utils.SafeZoneName(),
-    guildName = ns.Utils.SafeGuildName(),
-    profession1 = profession1,
-    profession2 = profession2,
-  }, ns.Utils.Now())
+  refreshLocalProfile(false)
   ns.Comm.RegisterPrefix()
 
   SLASH_SODBALASTROSTER1 = "/sb"
@@ -107,6 +118,7 @@ local function initialize()
   ns.Channel.EnsureJoined()
   ns.Utils.Print("loaded. Use /sb to open, /sbd or Debug for channel diagnostics.")
   C_Timer.After(2, function()
+    refreshLocalProfile(true)
     ns.Channel.ScanRoster()
     refreshUI()
   end)
@@ -119,7 +131,14 @@ Core:SetScript("OnEvent", function(_, event, ...)
   end
 
   if event == "PLAYER_ENTERING_WORLD" then
+    refreshLocalProfile(true)
     ns.Channel.EnsureJoined()
+    return
+  end
+
+  if event == "SKILL_LINES_CHANGED" then
+    refreshLocalProfile(true)
+    refreshUI()
     return
   end
 
@@ -177,6 +196,7 @@ end)
 Core:RegisterEvent("PLAYER_LOGIN")
 Core:RegisterEvent("PLAYER_ENTERING_WORLD")
 Core:RegisterEvent("PLAYER_LOGOUT")
+Core:RegisterEvent("SKILL_LINES_CHANGED")
 Core:RegisterEvent("CHANNEL_UI_UPDATE")
 Core:RegisterEvent("CHAT_MSG_CHANNEL_NOTICE")
 Core:RegisterEvent("CHAT_MSG_CHANNEL")

@@ -109,6 +109,13 @@ function Comm.SendInfo(target)
   sendAddonWhisper(payload, target)
 end
 
+function Comm.BroadcastInfo()
+  local peers = Store.GetOnlineAddonMembers()
+  for _, name in ipairs(peers) do
+    Comm.SendInfo(name)
+  end
+end
+
 function Comm.QueueHistorySummary(target, latestAt)
   target = Utils.NormalizeName(target)
   latestAt = tonumber(latestAt) or 0

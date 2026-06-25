@@ -48,6 +48,13 @@ function Store.GetRoster()
   return ns.db.roster
 end
 
+function Store.ResetTransientState()
+  for _, member in pairs(Store.GetRoster()) do
+    member.isOnlineInChannel = false
+    member.missingScans = 0
+  end
+end
+
 function Store.GetMember(name)
   name = Utils.NormalizeName(name)
   if not name then
