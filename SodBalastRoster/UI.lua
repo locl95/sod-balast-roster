@@ -211,12 +211,17 @@ local function setRowTexts(row, member)
 
   row.zone:SetText(member.zone ~= "" and member.zone or "?")
   row.guild:SetText(member.guildName ~= "" and member.guildName or "?")
+  local professions = "?"
+  if member.profession1 ~= "" or member.profession2 ~= "" then
+    professions = table.concat({ member.profession1 ~= "" and member.profession1 or "-", member.profession2 ~= "" and member.profession2 or "-" }, " / ")
+  end
+  row.profs:SetText(professions)
   row.lastSeen:SetText(member.isOnlineInChannel and "Online" or Utils.FormatLastSeen(member.lastSeenAt))
 end
 
 local function createRow(parent, index)
   local row = CreateFrame("Button", nil, parent)
-  row:SetSize(820, ROW_HEIGHT)
+  row:SetSize(848, ROW_HEIGHT)
   row:SetPoint("TOPLEFT", parent, "TOPLEFT", 8, -120 - ((index - 1) * ROW_HEIGHT))
   row:EnableMouse(true)
   row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
@@ -265,8 +270,11 @@ local function createRow(parent, index)
   row.guild = createLabel(row, 170, "LEFT")
   row.guild:SetPoint("LEFT", row.zone, "RIGHT", 4, 0)
 
+  row.profs = createLabel(row, 130, "LEFT")
+  row.profs:SetPoint("LEFT", row.guild, "RIGHT", 4, 0)
+
   row.lastSeen = createLabel(row, 70, "LEFT")
-  row.lastSeen:SetPoint("LEFT", row.guild, "RIGHT", 4, 0)
+  row.lastSeen:SetPoint("LEFT", row.profs, "RIGHT", 4, 0)
 
   row:SetScript("OnEnter", function(self)
     self.highlight:Show()
@@ -409,9 +417,10 @@ function UI.Create()
     { text = "Name", x = 44, width = 150 },
     { text = "Lvl", x = 198, width = 40 },
     { text = "Class", x = 242, width = 90 },
-    { text = "Zone", x = 336, width = 180 },
-    { text = "Guild", x = 520, width = 170 },
-    { text = "Last Seen", x = 694, width = 70 },
+    { text = "Zone", x = 336, width = 170 },
+    { text = "Guild", x = 510, width = 130 },
+    { text = "Profs", x = 644, width = 130 },
+    { text = "Last Seen", x = 778, width = 70 },
   }
 
   for _, header in ipairs(headers) do

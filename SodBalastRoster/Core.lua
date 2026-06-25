@@ -82,11 +82,14 @@ end
 local function initialize()
   ns.Store.Init()
   ns.History.Init()
+  local profession1, profession2 = ns.Utils.SafeProfessions()
   ns.Store.SetProfile(ns.Utils.PlayerName(), {
     level = ns.Utils.SafeLevel(),
     classFile = ns.Utils.SafeClassFile(),
     zone = ns.Utils.SafeZoneName(),
     guildName = ns.Utils.SafeGuildName(),
+    profession1 = profession1,
+    profession2 = profession2,
   }, ns.Utils.Now())
   ns.Comm.RegisterPrefix()
 

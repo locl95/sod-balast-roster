@@ -57,6 +57,22 @@ function Utils.SafeLevel()
   return UnitLevel("player") or 0
 end
 
+function Utils.SafeProfessions()
+  local professions = {}
+  local skillLines = { GetProfessions() }
+
+  for _, skillLine in ipairs(skillLines) do
+    if skillLine then
+      local name = GetProfessionInfo(skillLine)
+      if name and name ~= "" then
+        professions[#professions + 1] = name
+      end
+    end
+  end
+
+  return professions[1] or "", professions[2] or ""
+end
+
 function Utils.SplitMessage(message, separator)
   local parts = {}
   if not message or message == "" then
