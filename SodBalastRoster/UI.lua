@@ -591,10 +591,16 @@ function UI.RefreshHistory()
 
   local text = #lines > 0 and table.concat(lines, "\n") or "No history yet."
   frame.historyText:SetText(text)
-  frame.historyText:SetHeight(math.max(1, math.max(#lines, 1) * 14))
+  frame.historyText:SetHeight(math.max(frame.historyText:GetTextHeight() + 8, 1))
 
-  local maxScroll = math.max(0, frame.historyText:GetHeight() - frame.historyBox:GetHeight())
-  frame.historyBox:SetVerticalScroll(maxScroll)
+  C_Timer.After(0, function()
+    if not UI.frame or not UI.frame.historyBox or not UI.frame.historyText then
+      return
+    end
+
+    local maxScroll = math.max(0, UI.frame.historyText:GetHeight() - UI.frame.historyBox:GetHeight())
+    UI.frame.historyBox:SetVerticalScroll(maxScroll)
+  end)
   frame.status:SetText("")
 end
 
