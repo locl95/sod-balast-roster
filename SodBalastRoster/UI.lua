@@ -24,55 +24,102 @@ local HISTORY_LABELS = {
 
 local CLASS_ICON_TEXTURE = "Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES"
 
-local function openFallbackMenu(anchor, member)
-  UI.activeMenuMember = member
-
-  local menu = {
-    {
-      text = member.name,
-      isTitle = true,
-      notCheckable = true,
-    },
-    {
-      text = "Whisper",
-      notCheckable = true,
-      func = function()
-        ChatFrame_SendTell(member.name)
-      end,
-    },
-    {
-      text = "Invite",
-      notCheckable = true,
-      func = function()
-        InviteUnit(member.name)
-      end,
-    },
-    {
-      text = "Target",
-      notCheckable = true,
-      func = function()
-        TargetByName(member.name, true)
-      end,
-    },
-    {
-      text = "Refresh Info",
-      notCheckable = true,
-      func = function()
-        if member.hasAddon then
-          ns.Comm.QueueProfileRequest(member.name)
-        else
-          ns.Who.RequestOneFromHardwareEvent(member.name)
-        end
-      end,
-    },
-  }
-
-  if not UI.dropdown then
-    UI.dropdown = CreateFrame("Frame", "SodBalastRosterDropdown", UIParent, "UIDropDownMenuTemplate")
-    UI.dropdown:SetFrameStrata("FULLSCREEN_DIALOG")
+local function runMenuAction(action, member)
+  if not member or not member.name then
+    return
   end
 
-  EasyMenu(menu, UI.dropdown, "cursor", 0, 0, "MENU", 2)
+  if action == "whisper" then
+    ChatFrame_SendTell(member.name)
+  elseif action == "invite" then
+    InviteUnit(member.name)
+  elseif action == "target" then
+    TargetByName(member.name, true)
+  elseif action == "refresh" then
+    if member.hasAddon then
+      ns.Comm.QueueProfileRequest(member.name)
+    else
+      ns.Who.RequestOneFromHardwareEvent(member.name)
+    end
+  end
+
+  if UI.contextMenu then
+    UI.contextMenu:Hide()
+  end
+end
+
+local function ensureContextMenu()
+  if UI.contextMenu then
+    return UI.contextMenu
+  end
+
+  local menu = CreateFrame("Frame", "SodBalastRosterContextMenu", UIParent, BackdropTemplateMixin and "BackdropTemplate")
+  menu:SetFrameStrata("FULLSCREEN_DIALOG")
+  menu:SetToplevel(true)
+  menu:SetClampedToScreen(true)
+  menu:EnableMouse(true)
+  menu:SetSize(170, 132)
+
+  if menu.SetBackdrop then
+    menu:SetBackdrop({
+      bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+      edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+      tile = true,
+      tileSize = 16,
+      edgeSize = 16,
+      insets = { left = 4, right = 4, top = 4, bottom = 4 },
+    })
+    menu:SetBackdropColor(0.05, 0.05, 0.05, 0.96)
+    menu:SetBackdropBorderColor(0.6, 0.6, 0.6, 1)
+  end
+
+  menu.title = menu:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  menu.title:SetPoint("TOPLEFT", menu, "TOPLEFT", 10, -10)
+  menu.title:SetPoint("RIGHT", menu, "RIGHT", -10, 0)
+  menu.title:SetJustifyH("LEFT")
+
+  local actions = {
+    { key = "whisper", text = "Whisper" },
+    { key = "invite", text = "Invite" },
+    { key = "target", text = "Target" },
+    { key = "refresh", text = "Refresh Info" },
+  }
+
+  menu.buttons = {}
+  for index, action in ipairs(actions) do
+    local button = CreateFrame("Button", nil, menu, "UIPanelButtonTemplate")
+    button:SetSize(146, 20)
+    button:SetPoint("TOPLEFT", menu, "TOPLEFT", 10, -26 - ((index - 1) * 24))
+    button:SetText(action.text)
+    button:SetScript("OnClick", function()
+      runMenuAction(action.key, menu.member)
+    end)
+    menu.buttons[#menu.buttons + 1] = button
+  end
+
+  menu:SetScript("OnMouseDown", function(_, button)
+    if button == "RightButton" then
+      menu:Hide()
+    end
+  end)
+
+  UI.contextMenu = menu
+  return menu
+end
+
+local function openFallbackMenu(anchor, member)
+  local menu = ensureContextMenu()
+  menu.member = member
+  menu.title:SetText(member.name or "?")
+
+  local scale = UIParent:GetEffectiveScale()
+  local x, y = GetCursorPosition()
+  x = x / scale
+  y = y / scale
+
+  menu:ClearAllPoints()
+  menu:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x + 8, y + 8)
+  menu:Show()
 end
 
 local function openNameMenu(anchor, member)
@@ -170,7 +217,6 @@ local function createRow(parent, index)
       return
     end
 
-    ns.Utils.Print("right click: " .. tostring(row.member.name))
     openNameMenu(anchor, row.member)
   end
 
