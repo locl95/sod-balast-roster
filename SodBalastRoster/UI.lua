@@ -160,6 +160,24 @@ local function getClassIconTag(classFile)
   )
 end
 
+local function getProfessionIconsText(member)
+  local icons = {}
+
+  if member.profession1Icon and member.profession1Icon ~= "" and tostring(member.profession1Icon) ~= "0" then
+    icons[#icons + 1] = string.format("|T%s:14:14:0:0|t", tostring(member.profession1Icon))
+  end
+
+  if member.profession2Icon and member.profession2Icon ~= "" and tostring(member.profession2Icon) ~= "0" then
+    icons[#icons + 1] = string.format("|T%s:14:14:0:0|t", tostring(member.profession2Icon))
+  end
+
+  if #icons > 0 then
+    return table.concat(icons, " ")
+  end
+
+  return nil
+end
+
 local function colorizeName(name)
   local member = Store.GetMember(name)
   local classColor = member and getClassColor(member.classFile) or nil
@@ -212,7 +230,10 @@ local function setRowTexts(row, member)
   row.zone:SetText(member.zone ~= "" and member.zone or "?")
   row.guild:SetText(member.guildName ~= "" and member.guildName or "?")
   local professions = member.hasAddon and "-" or "?"
-  if member.profession1 ~= "" or member.profession2 ~= "" then
+  local professionIcons = getProfessionIconsText(member)
+  if professionIcons then
+    professions = professionIcons
+  elseif member.profession1 ~= "" or member.profession2 ~= "" then
     professions = table.concat({ member.profession1 ~= "" and member.profession1 or "-", member.profession2 ~= "" and member.profession2 or "-" }, " / ")
   end
   row.profs:SetText(professions)

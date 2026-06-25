@@ -7,7 +7,7 @@ ns.version = "0.1.2"
 local refreshUI
 
 local function refreshLocalProfile(shouldBroadcast)
-  local profession1, profession2 = ns.Utils.SafeProfessions()
+  local profession1, profession2, profession1Icon, profession2Icon = ns.Utils.SafeProfessions()
   local _, changes = ns.Store.SetProfile(ns.Utils.PlayerName(), {
     level = ns.Utils.SafeLevel(),
     classFile = ns.Utils.SafeClassFile(),
@@ -15,6 +15,8 @@ local function refreshLocalProfile(shouldBroadcast)
     guildName = ns.Utils.SafeGuildName(),
     profession1 = profession1,
     profession2 = profession2,
+    profession1Icon = profession1Icon,
+    profession2Icon = profession2Icon,
   }, ns.Utils.Now())
 
   if shouldBroadcast and changes then

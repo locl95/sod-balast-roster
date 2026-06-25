@@ -57,43 +57,62 @@ function Utils.SafeLevel()
   return UnitLevel("player") or 0
 end
 
+function Utils.ResolveProfessionIcon(name, icon)
+  if icon and icon ~= 0 and icon ~= "" then
+    return tonumber(icon) or icon
+  end
+
+  if not name or name == "" then
+    return ""
+  end
+
+  local _, _, texture = GetSpellInfo(name)
+  return texture or ""
+end
+
 function Utils.SafeProfessions()
   local primary1, primary2 = GetProfessions()
   local profession1 = ""
   local profession2 = ""
+  local profession1Icon = ""
+  local profession2Icon = ""
 
   if primary1 then
-    profession1 = GetProfessionInfo(primary1) or ""
+    local name1, icon1 = GetProfessionInfo(primary1)
+    profession1 = name1 or ""
+    profession1Icon = Utils.ResolveProfessionIcon(profession1, icon1)
   end
 
   if primary2 then
-    profession2 = GetProfessionInfo(primary2) or ""
+    local name2, icon2 = GetProfessionInfo(primary2)
+    profession2 = name2 or ""
+    profession2Icon = Utils.ResolveProfessionIcon(profession2, icon2)
   end
 
   if profession1 ~= "" or profession2 ~= "" then
-    return profession1, profession2
+    return profession1, profession2, profession1Icon, profession2Icon
   end
 
   if GetNumSkillLines and GetSkillLineInfo then
-    local currentHeader = nil
     local professions = {}
 
     for index = 1, GetNumSkillLines() do
-      local skillName, isHeader = GetSkillLineInfo(index)
-      if isHeader then
-        currentHeader = skillName
-      elseif currentHeader == TRADE_SKILLS and skillName and skillName ~= "" then
-        professions[#professions + 1] = skillName
+      local skillName, isHeader, _, skillRank, _, _, skillMaxRank, isAbandonable = GetSkillLineInfo(index)
+      if not isHeader and isAbandonable and skillName and skillName ~= "" and (skillRank or 0) > 0 and (skillMaxRank or 0) > 0 then
+        professions[#professions + 1] = {
+          name = skillName,
+          icon = Utils.ResolveProfessionIcon(skillName),
+        }
         if #professions >= 2 then
           break
         end
       end
     end
 
-    return professions[1] or "", professions[2] or ""
+    return professions[1] and professions[1].name or "", professions[2] and professions[2].name or "", professions[1] and professions[1].icon or "", professions[2] and professions[2].icon or ""
   end
 
-  return profession1, profession2
+  return profession1, profession2, profession1Icon, profession2Icon
 end
 
 function Utils.DebugProfessions()
@@ -138,21 +157,22 @@ function Utils.DebugProfessions()
     lines[#lines + 1] = string.format("GetNumSkillLines=%s", tostring(count))
 
     for index = 1, count do
-      local skillName, isHeader, isExpanded, skillRank, _, _, skillMaxRank = GetSkillLineInfo(index)
+      local skillName, isHeader, isExpanded, skillRank, _, _, skillMaxRank, isAbandonable = GetSkillLineInfo(index)
       lines[#lines + 1] = string.format(
-        "SkillLine[%d] name=%s header=%s expanded=%s rank=%s/%s",
+        "SkillLine[%d] name=%s header=%s expanded=%s rank=%s/%s abandonable=%s",
         index,
         tostring(skillName),
         tostring(isHeader),
         tostring(isExpanded),
         tostring(skillRank),
-        tostring(skillMaxRank)
+        tostring(skillMaxRank),
+        tostring(isAbandonable)
       )
     end
   end
 
-  local prof1, prof2 = Utils.SafeProfessions()
-  lines[#lines + 1] = string.format("SafeProfessions=%s / %s", tostring(prof1), tostring(prof2))
+  local prof1, prof2, icon1, icon2 = Utils.SafeProfessions()
+  lines[#lines + 1] = string.format("SafeProfessions=%s / %s icons=%s / %s", tostring(prof1), tostring(prof2), tostring(icon1), tostring(icon2))
 
   return lines
 end

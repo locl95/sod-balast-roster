@@ -92,7 +92,7 @@ function Comm.SendInfo(target)
   end
 
   local playerName = Utils.PlayerName() or ""
-  local profession1, profession2 = Utils.SafeProfessions()
+  local profession1, profession2, profession1Icon, profession2Icon = Utils.SafeProfessions()
   local payload = table.concat({
     "INFO",
     ns.Constants.protocolVersion,
@@ -103,6 +103,8 @@ function Comm.SendInfo(target)
     Utils.SafeGuildName(),
     Utils.EscapeField(profession1),
     Utils.EscapeField(profession2),
+    tostring(profession1Icon or ""),
+    tostring(profession2Icon or ""),
     tostring(History.GetLatestTimestamp()),
   }, ";")
 
@@ -229,7 +231,7 @@ function Comm.HandleInfo(parts, sender)
   local existing = Store.GetMember(name)
   local hadAddon = existing and existing.hasAddon or false
   local hadProfile = existing and (existing.lastProfileAt or 0) > 0 or false
-  local advertisedAt = tonumber(parts[10]) or 0
+  local advertisedAt = tonumber(parts[12]) or 0
   local member, changes = Store.SetProfile(name, {
     level = parts[4],
     classFile = parts[5],
@@ -237,6 +239,8 @@ function Comm.HandleInfo(parts, sender)
     guildName = parts[7],
     profession1 = Utils.UnescapeField(parts[8]),
     profession2 = Utils.UnescapeField(parts[9]),
+    profession1Icon = parts[10],
+    profession2Icon = parts[11],
   }, Utils.Now())
 
   Store.MarkHistoryAdvertised(name, advertisedAt)

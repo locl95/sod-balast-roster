@@ -80,6 +80,8 @@ function Store.GetMember(name)
     guildName = "",
     profession1 = "",
     profession2 = "",
+    profession1Icon = "",
+    profession2Icon = "",
     lastRequestedAt = 0,
     lastWhoRequestedAt = 0,
   }
@@ -179,6 +181,8 @@ function Store.SetProfile(name, profile, timestamp)
   apply("guildName", profile.guildName)
   apply("profession1", profile.profession1)
   apply("profession2", profile.profession2)
+  apply("profession1Icon", profile.profession1Icon)
+  apply("profession2Icon", profile.profession2Icon)
 
   member.hasAddon = true
   member.lastProfileAt = timestamp
