@@ -285,10 +285,10 @@ local function createRow(parent, index)
   row.class = createLabel(row, 90, "LEFT")
   row.class:SetPoint("LEFT", row.level, "RIGHT", 4, 0)
 
-  row.zone = createLabel(row, 180, "LEFT")
+  row.zone = createLabel(row, 170, "LEFT")
   row.zone:SetPoint("LEFT", row.class, "RIGHT", 4, 0)
 
-  row.guild = createLabel(row, 170, "LEFT")
+  row.guild = createLabel(row, 130, "LEFT")
   row.guild:SetPoint("LEFT", row.zone, "RIGHT", 4, 0)
 
   row.profs = createLabel(row, 130, "LEFT")
