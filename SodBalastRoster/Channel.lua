@@ -7,6 +7,10 @@ local Channel = {
   lastScanAt = 0,
   lastScanOk = false,
   lastScanReason = "not_scanned",
+  lastMemberCount = 0,
+  lastResolvedCount = 0,
+  lastResolvedNames = {},
+  lastFallbackPlayer = nil,
 }
 ns.Channel = Channel
 
@@ -44,10 +48,15 @@ function Channel.ScanRoster()
   local timestamp = Utils.Now()
   Channel.lastScanAt = timestamp
 
+  local channelId = Channel.GetChannelId()
   local displayIndex = Channel.FindDisplayIndex()
   if not displayIndex then
     Channel.lastScanOk = false
     Channel.lastScanReason = "channel_not_visible"
+    Channel.lastMemberCount = 0
+    Channel.lastResolvedCount = 0
+    Channel.lastResolvedNames = {}
+    Channel.lastFallbackPlayer = nil
     return false, "channel_not_visible"
   end
 
@@ -57,6 +66,9 @@ function Channel.ScanRoster()
 
   local _, _, _, _, memberCount = GetChannelDisplayInfo(displayIndex)
   local activeNames = {}
+  local resolvedNames = {}
+  Channel.lastMemberCount = memberCount or 0
+  Channel.lastFallbackPlayer = nil
 
   for rosterIndex = 1, memberCount or 0 do
     local name = GetChannelRosterInfo(displayIndex, rosterIndex)
@@ -64,6 +76,7 @@ function Channel.ScanRoster()
 
     if name then
       activeNames[name] = true
+      resolvedNames[#resolvedNames + 1] = name
       local member, justJoined = Store.MarkSeenInChannel(name, timestamp)
       if justJoined then
         History.Add("joined_channel", name)
@@ -75,13 +88,23 @@ function Channel.ScanRoster()
     end
   end
 
+  Channel.lastResolvedNames = resolvedNames
+  Channel.lastResolvedCount = #resolvedNames
+
+  if Channel.lastResolvedCount == 0 and (memberCount or 0) > 0 then
+    Channel.lastFallbackPlayer = Utils.PlayerName()
+    Channel.lastScanReason = "roster_names_unresolved"
+  end
+
   local missingMembers = Store.MarkMissingFromChannel(activeNames)
   for _, member in ipairs(missingMembers) do
     History.Add("left_channel", member.name)
   end
 
   Channel.lastScanOk = true
-  Channel.lastScanReason = nil
+  if Channel.lastScanReason ~= "roster_names_unresolved" then
+    Channel.lastScanReason = nil
+  end
   return true, nil
 end
 
@@ -105,5 +128,9 @@ function Channel.DebugStatus()
     lastScanAt = Channel.lastScanAt,
     lastScanOk = Channel.lastScanOk,
     lastScanReason = Channel.lastScanReason,
+    lastMemberCount = Channel.lastMemberCount,
+    lastResolvedCount = Channel.lastResolvedCount,
+    lastResolvedNames = Channel.lastResolvedNames,
+    lastFallbackPlayer = Channel.lastFallbackPlayer,
   }
 end

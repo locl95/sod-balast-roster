@@ -23,13 +23,21 @@ local function handleSlashCommand(message)
     local ok, reason = ns.Channel.ScanRoster()
     local status = ns.Channel.DebugStatus()
     ns.Utils.Print(string.format(
-      "debug channelId=%s displayIndex=%s visibleCount=%s scanOk=%s reason=%s",
+      "debug channelId=%s displayIndex=%s visibleCount=%s memberCount=%s resolvedCount=%s scanOk=%s reason=%s",
       tostring(status.channelId),
       tostring(status.displayIndex),
       tostring(status.visibleCount),
+      tostring(status.lastMemberCount),
+      tostring(status.lastResolvedCount),
       tostring(ok),
       tostring(reason)
     ))
+    if status.lastResolvedNames and #status.lastResolvedNames > 0 then
+      ns.Utils.Print("resolved names: " .. table.concat(status.lastResolvedNames, ", "))
+    end
+    if status.lastFallbackPlayer then
+      ns.Utils.Print("fallback candidate: " .. tostring(status.lastFallbackPlayer))
+    end
     refreshUI()
     return
   end

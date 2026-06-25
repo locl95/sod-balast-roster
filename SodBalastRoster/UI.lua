@@ -263,14 +263,27 @@ function UI.RefreshRoster()
 
   if total == 0 then
     frame.emptyState:Show()
-    frame.emptyState:SetText(string.format(
-      "No hay miembros visibles en el roster local.\n\nCanal ID: %s\nDisplay Index: %s\nVisible Count: %s\nLast Scan OK: %s\nReason: %s\n\nPrueba `/sb debug` y pulsa `Refresh` dentro de SODBALAST.",
+    local message = string.format(
+      "No hay miembros visibles en el roster local.\n\nCanal ID: %s\nDisplay Index: %s\nVisible Count: %s\nMember Count: %s\nResolved Count: %s\nLast Scan OK: %s\nReason: %s",
       tostring(channelStatus.channelId),
       tostring(channelStatus.displayIndex),
       tostring(channelStatus.visibleCount),
+      tostring(channelStatus.lastMemberCount),
+      tostring(channelStatus.lastResolvedCount),
       tostring(channelStatus.lastScanOk),
       tostring(channelStatus.lastScanReason)
-    ))
+    )
+
+    if channelStatus.lastFallbackPlayer then
+      message = message .. string.format("\nFallback candidate: %s", tostring(channelStatus.lastFallbackPlayer))
+    end
+
+    if channelStatus.lastScanReason == "roster_names_unresolved" then
+      message = message .. "\n\nEl canal parece existir y tener miembros, pero la API no esta resolviendo nombres del roster."
+    end
+
+    message = message .. "\n\nPrueba `/sb debug` y pulsa `Refresh` dentro de SODBALAST."
+    frame.emptyState:SetText(message)
   else
     frame.emptyState:Hide()
   end
