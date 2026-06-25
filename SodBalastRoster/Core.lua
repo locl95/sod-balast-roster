@@ -17,31 +17,40 @@ end
 
 local function runDebug()
   ns.Utils.Print("running debug scan")
-  ns.Channel.EnsureJoined()
-  local ok, reason = ns.Channel.ScanRoster()
-  local status = ns.Channel.DebugStatus()
-  local summary = string.format(
-    "debug channelId=%s displayIndex=%s visibleCount=%s memberCount=%s resolvedCount=%s scanOk=%s reason=%s",
-    tostring(status.channelId),
-    tostring(status.displayIndex),
-    tostring(status.visibleCount),
-    tostring(status.lastMemberCount),
-    tostring(status.lastResolvedCount),
-    tostring(ok),
-    tostring(reason)
-  )
+  Core.lastDebugSummary = "running debug scan"
 
-  Core.lastDebugSummary = summary
-  ns.Utils.Print(string.format(
-    "%s",
-    summary
-  ))
-  if status.lastResolvedNames and #status.lastResolvedNames > 0 then
-    ns.Utils.Print("resolved names: " .. table.concat(status.lastResolvedNames, ", "))
+  local ok, err = pcall(function()
+    ns.Channel.EnsureJoined()
+    local scanOk, reason = ns.Channel.ScanRoster()
+    local status = ns.Channel.DebugStatus()
+    local summary = string.format(
+      "debug channelId=%s displayIndex=%s visibleCount=%s memberCount=%s resolvedCount=%s scanOk=%s reason=%s",
+      tostring(status.channelId),
+      tostring(status.displayIndex),
+      tostring(status.visibleCount),
+      tostring(status.lastMemberCount),
+      tostring(status.lastResolvedCount),
+      tostring(scanOk),
+      tostring(reason)
+    )
+
+    Core.lastDebugSummary = summary
+    ns.Utils.Print(summary)
+
+    if status.lastResolvedNames and #status.lastResolvedNames > 0 then
+      ns.Utils.Print("resolved names: " .. table.concat(status.lastResolvedNames, ", "))
+    end
+
+    if status.lastFallbackPlayer then
+      ns.Utils.Print("fallback candidate: " .. tostring(status.lastFallbackPlayer))
+    end
+  end)
+
+  if not ok then
+    Core.lastDebugSummary = "debug error: " .. tostring(err)
+    ns.Utils.Print("debug error: " .. tostring(err))
   end
-  if status.lastFallbackPlayer then
-    ns.Utils.Print("fallback candidate: " .. tostring(status.lastFallbackPlayer))
-  end
+
   refreshUI()
 end
 
