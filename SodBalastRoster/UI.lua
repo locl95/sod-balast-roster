@@ -38,9 +38,8 @@ local function createLabel(parent, width, justify)
 end
 
 local function setRowTexts(row, member)
-  row.online:SetText(member.isOnlineInChannel and "Y" or "N")
-  row.name:SetText(member.name or "")
   row.addon:SetText(member.hasAddon and "Y" or "-")
+  row.name:SetText(member.name or "")
   row.level:SetText(member.level and member.level > 0 and tostring(member.level) or "?")
   row.class:SetText(member.classFile ~= "" and member.classFile or "?")
   row.zone:SetText(member.zone ~= "" and member.zone or "?")
@@ -54,17 +53,14 @@ local function createRow(parent, index)
   row:SetPoint("TOPLEFT", parent, "TOPLEFT", 8, -120 - ((index - 1) * ROW_HEIGHT))
   row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 
-  row.online = createLabel(row, 28, "LEFT")
-  row.online:SetPoint("LEFT", row, "LEFT", 4, 0)
+  row.addon = createLabel(row, 28, "LEFT")
+  row.addon:SetPoint("LEFT", row, "LEFT", 4, 0)
 
   row.name = createLabel(row, 150, "LEFT")
-  row.name:SetPoint("LEFT", row.online, "RIGHT", 4, 0)
-
-  row.addon = createLabel(row, 42, "LEFT")
-  row.addon:SetPoint("LEFT", row.name, "RIGHT", 4, 0)
+  row.name:SetPoint("LEFT", row.addon, "RIGHT", 4, 0)
 
   row.level = createLabel(row, 40, "LEFT")
-  row.level:SetPoint("LEFT", row.addon, "RIGHT", 4, 0)
+  row.level:SetPoint("LEFT", row.name, "RIGHT", 4, 0)
 
   row.class = createLabel(row, 90, "LEFT")
   row.class:SetPoint("LEFT", row.level, "RIGHT", 4, 0)
@@ -211,14 +207,13 @@ function UI.Create()
 
   frame.rosterHeaders = {}
   local headers = {
-    { text = "On", x = 12, width = 28 },
+    { text = "A", x = 12, width = 28 },
     { text = "Name", x = 44, width = 150 },
-    { text = "A", x = 198, width = 42 },
-    { text = "Lvl", x = 244, width = 40 },
-    { text = "Class", x = 288, width = 90 },
-    { text = "Zone", x = 382, width = 180 },
-    { text = "Guild", x = 566, width = 170 },
-    { text = "Last Seen", x = 740, width = 70 },
+    { text = "Lvl", x = 198, width = 40 },
+    { text = "Class", x = 242, width = 90 },
+    { text = "Zone", x = 336, width = 180 },
+    { text = "Guild", x = 520, width = 170 },
+    { text = "Last Seen", x = 694, width = 70 },
   }
 
   for _, header in ipairs(headers) do
