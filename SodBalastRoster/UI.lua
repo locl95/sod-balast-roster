@@ -12,6 +12,15 @@ local TAB_HISTORY = "history"
 local ROW_HEIGHT = 18
 local VISIBLE_ROWS = 16
 
+local HISTORY_LABELS = {
+  joined_channel = "joined channel",
+  left_channel = "left channel",
+  profile_discovered = "profile discovered",
+  level_changed = "level changed",
+  zone_changed = "zone changed",
+  guild_changed = "guild changed",
+}
+
 local function createCheckLabel(checkButton, text)
   local label = checkButton:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   label:SetPoint("LEFT", checkButton, "RIGHT", 2, 1)
@@ -97,6 +106,15 @@ local function createTabButton(parent, text, x, tabName)
     UI.Refresh()
   end)
   return button
+end
+
+local function formatHistoryEntry(entry)
+  local label = HISTORY_LABELS[entry.type] or entry.type
+  if entry.details and entry.details ~= "" then
+    return string.format("[%s] %s: %s (%s)", date("%H:%M:%S", entry.at), entry.name, label, entry.details)
+  end
+
+  return string.format("[%s] %s: %s", date("%H:%M:%S", entry.at), entry.name, label)
 end
 
 function UI.Create()
@@ -186,6 +204,7 @@ function UI.Create()
   frame.emptyState:SetJustifyV("TOP")
   frame.emptyState:SetText("")
 
+  frame.rosterHeaders = {}
   local headers = {
     { text = "On", x = 12, width = 28 },
     { text = "Name", x = 44, width = 150 },
@@ -203,7 +222,12 @@ function UI.Create()
     label:SetWidth(header.width)
     label:SetJustifyH("LEFT")
     label:SetText(header.text)
+    frame.rosterHeaders[#frame.rosterHeaders + 1] = label
   end
+
+  frame.historyHeader = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  frame.historyHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -76)
+  frame.historyHeader:SetText("Channel History")
 
   for index = 1, VISIBLE_ROWS do
     UI.rows[index] = createRow(frame, index)
@@ -310,12 +334,14 @@ function UI.RefreshHistory()
 
   for index = #entries, 1, -1 do
     local entry = entries[index]
-    lines[#lines + 1] = string.format("[%s] %s - %s%s", date("%H:%M:%S", entry.at), entry.name, entry.type, entry.details and (" (" .. entry.details .. ")") or "")
+    lines[#lines + 1] = formatHistoryEntry(entry)
   end
 
-  local text = table.concat(lines, "\n")
+  local text = #lines > 0 and table.concat(lines, "\n") or "No history yet."
   frame.historyText:SetText(text)
-  frame.historyText:SetHeight(math.max(1, #lines * 14))
+  frame.historyText:SetHeight(math.max(1, math.max(#lines, 1) * 14))
+  frame.historyBox:SetVerticalScroll(0)
+  frame.status:SetText(string.format("History entries %d", #entries))
 end
 
 function UI.Refresh()
@@ -327,6 +353,18 @@ function UI.Refresh()
   frame.searchBox:SetText(uiState.search or "")
 
   local rosterSelected = uiState.selectedTab ~= TAB_HISTORY
+  frame.onlyOnline:SetShown(rosterSelected)
+  frame.onlyOnline.label:SetShown(rosterSelected)
+  frame.onlyAddon:SetShown(rosterSelected)
+  frame.onlyAddon.label:SetShown(rosterSelected)
+  frame.searchBox:SetShown(rosterSelected)
+  frame.refreshButton:SetShown(rosterSelected)
+  frame.debugButton:SetShown(rosterSelected)
+  frame.historyHeader:SetShown(not rosterSelected)
+  for _, header in ipairs(frame.rosterHeaders) do
+    header:SetShown(rosterSelected)
+  end
+
   for _, row in ipairs(UI.rows) do
     if rosterSelected then
       row:Show()
