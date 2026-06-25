@@ -24,6 +24,73 @@ local HISTORY_LABELS = {
 
 local CLASS_ICON_TEXTURE = "Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES"
 
+local function openNameMenu(anchor, member)
+  if not anchor or not member or not member.name then
+    return
+  end
+
+  if FriendsFrame_ShowDropdown then
+    FriendsFrame_ShowDropdown(member.name, member.isOnlineInChannel)
+    return
+  end
+
+  if UnitPopup_ShowMenu then
+    if not UI.blizzardDropdown then
+      UI.blizzardDropdown = CreateFrame("Frame", "SodBalastRosterBlizzardDropdown", UIParent, "UIDropDownMenuTemplate")
+    end
+
+    local menuType = member.isOnlineInChannel and "FRIEND" or "FRIEND_OFFLINE"
+    UnitPopup_ShowMenu(UI.blizzardDropdown, menuType, nil, member.name)
+    return
+  end
+
+  local menu = {
+    {
+      text = member.name,
+      isTitle = true,
+      notCheckable = true,
+    },
+    {
+      text = "Whisper",
+      notCheckable = true,
+      func = function()
+        ChatFrame_SendTell(member.name)
+      end,
+    },
+    {
+      text = "Invite",
+      notCheckable = true,
+      func = function()
+        InviteUnit(member.name)
+      end,
+    },
+    {
+      text = "Target",
+      notCheckable = true,
+      func = function()
+        TargetByName(member.name, true)
+      end,
+    },
+    {
+      text = "Refresh Info",
+      notCheckable = true,
+      func = function()
+        if member.hasAddon then
+          ns.Comm.QueueProfileRequest(member.name)
+        else
+          ns.Who.QueueRequest(member.name)
+        end
+      end,
+    },
+  }
+
+  if not UI.dropdown then
+    UI.dropdown = CreateFrame("Frame", "SodBalastRosterDropdown", UIParent, "UIDropDownMenuTemplate")
+  end
+
+  EasyMenu(menu, UI.dropdown, anchor, 0, 0, "MENU")
+end
+
 local function getClassColor(classFile)
   local colors = CUSTOM_CLASS_COLORS or RAID_CLASS_COLORS
   return colors and colors[classFile or ""] or nil
@@ -105,11 +172,36 @@ local function createRow(parent, index)
   row:SetPoint("TOPLEFT", parent, "TOPLEFT", 8, -120 - ((index - 1) * ROW_HEIGHT))
   row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 
+  row.highlight = row:CreateTexture(nil, "BACKGROUND")
+  row.highlight:SetAllPoints(row)
+  row.highlight:SetColorTexture(1, 1, 1, 0.08)
+  row.highlight:Hide()
+
   row.addon = createLabel(row, 28, "LEFT")
   row.addon:SetPoint("LEFT", row, "LEFT", 4, 0)
 
   row.name = createLabel(row, 150, "LEFT")
   row.name:SetPoint("LEFT", row.addon, "RIGHT", 4, 0)
+
+  row.nameButton = CreateFrame("Button", nil, row)
+  row.nameButton:SetPoint("TOPLEFT", row.name, "TOPLEFT", 0, 0)
+  row.nameButton:SetPoint("BOTTOMRIGHT", row.name, "BOTTOMRIGHT", 0, 0)
+  row.nameButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+  row.nameButton:SetScript("OnClick", function(self, button)
+    if not row.member then
+      return
+    end
+
+    if button == "RightButton" then
+      openNameMenu(self, row.member)
+    end
+  end)
+  row.nameButton:SetScript("OnEnter", function()
+    row.highlight:Show()
+  end)
+  row.nameButton:SetScript("OnLeave", function()
+    row.highlight:Hide()
+  end)
 
   row.level = createLabel(row, 40, "LEFT")
   row.level:SetPoint("LEFT", row.name, "RIGHT", 4, 0)
@@ -126,10 +218,12 @@ local function createRow(parent, index)
   row.lastSeen = createLabel(row, 70, "LEFT")
   row.lastSeen:SetPoint("LEFT", row.guild, "RIGHT", 4, 0)
 
-  row:SetScript("OnDoubleClick", function(self)
-    if self.member then
-      ChatFrame_SendTell(self.member.name)
-    end
+  row:SetScript("OnEnter", function(self)
+    self.highlight:Show()
+  end)
+
+  row:SetScript("OnLeave", function(self)
+    self.highlight:Hide()
   end)
 
   row:SetScript("OnClick", function(self, button)
@@ -138,7 +232,7 @@ local function createRow(parent, index)
     end
 
     if button == "RightButton" then
-      InviteUnit(self.member.name)
+      openNameMenu(self, self.member)
     end
   end)
 
