@@ -170,6 +170,7 @@ local function createRow(parent, index)
       return
     end
 
+    ns.Utils.Print("right click: " .. tostring(row.member.name))
     openNameMenu(anchor, row.member)
   end
 
@@ -189,7 +190,7 @@ local function createRow(parent, index)
   row.nameButton:SetPoint("LEFT", row.addon, "RIGHT", 4, 0)
   row.nameButton:EnableMouse(true)
   row.nameButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-  row.nameButton:SetScript("OnMouseUp", handleRightClick)
+  row.nameButton:SetScript("OnClick", handleRightClick)
   row.nameButton:SetScript("OnEnter", function()
     row.highlight:Show()
   end)
@@ -220,7 +221,7 @@ local function createRow(parent, index)
     self.highlight:Hide()
   end)
 
-  row:SetScript("OnMouseUp", handleRightClick)
+  row:SetScript("OnClick", handleRightClick)
 
   return row
 end
