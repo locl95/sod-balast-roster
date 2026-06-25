@@ -211,7 +211,7 @@ local function setRowTexts(row, member)
 
   row.zone:SetText(member.zone ~= "" and member.zone or "?")
   row.guild:SetText(member.guildName ~= "" and member.guildName or "?")
-  local professions = "?"
+  local professions = member.hasAddon and "-" or "?"
   if member.profession1 ~= "" or member.profession2 ~= "" then
     professions = table.concat({ member.profession1 ~= "" and member.profession1 or "-", member.profession2 ~= "" and member.profession2 or "-" }, " / ")
   end

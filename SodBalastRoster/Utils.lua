@@ -58,19 +58,19 @@ function Utils.SafeLevel()
 end
 
 function Utils.SafeProfessions()
-  local professions = {}
-  local skillLines = { GetProfessions() }
+  local primary1, primary2 = GetProfessions()
+  local profession1 = ""
+  local profession2 = ""
 
-  for _, skillLine in ipairs(skillLines) do
-    if skillLine then
-      local name = GetProfessionInfo(skillLine)
-      if name and name ~= "" then
-        professions[#professions + 1] = name
-      end
-    end
+  if primary1 then
+    profession1 = GetProfessionInfo(primary1) or ""
   end
 
-  return professions[1] or "", professions[2] or ""
+  if primary2 then
+    profession2 = GetProfessionInfo(primary2) or ""
+  end
+
+  return profession1, profession2
 end
 
 function Utils.SplitMessage(message, separator)
