@@ -350,6 +350,7 @@ local function sendChatMessageFromInput()
 
   SendChatMessage(text, "CHANNEL", nil, channelId)
   frame.chatInput:SetText("")
+  frame.historyShouldScrollToBottom = true
 end
 
 local function scrollHistoryToBottom()
@@ -607,8 +608,11 @@ function UI.RefreshHistory()
     frame.historyBox:AddMessage(line)
   end
 
-  C_Timer.After(0, scrollHistoryToBottom)
-  C_Timer.After(0.05, scrollHistoryToBottom)
+  if frame.historyShouldScrollToBottom then
+    frame.historyShouldScrollToBottom = false
+    C_Timer.After(0, scrollHistoryToBottom)
+    C_Timer.After(0.05, scrollHistoryToBottom)
+  end
   frame.status:SetText("")
 end
 
