@@ -645,6 +645,9 @@ function UI.RefreshHistory()
     C_Timer.After(0, function()
       restoreHistoryScroll(previousScroll)
     end)
+    C_Timer.After(0.05, function()
+      restoreHistoryScroll(previousScroll)
+    end)
   end
   frame.status:SetText("")
 end
