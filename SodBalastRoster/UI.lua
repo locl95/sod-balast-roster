@@ -335,6 +335,23 @@ local function formatHistoryEntry(entry)
   return string.format("[%s] %s: %s", date("%H:%M:%S", entry.at), colorizeName(entry.name), label)
 end
 
+local function sendChatMessageFromInput()
+  local frame = UI.Create()
+  local text = Utils.Trim(frame.chatInput:GetText() or "")
+  if text == "" then
+    return
+  end
+
+  local channelId = ns.Channel.GetChannelId()
+  if not channelId or channelId <= 0 then
+    ns.Utils.Print("SODBALAST is not available.")
+    return
+  end
+
+  SendChatMessage(text, "CHANNEL", nil, channelId)
+  frame.chatInput:SetText("")
+end
+
 function UI.Create()
   if UI.frame then
     return UI.frame
@@ -470,7 +487,7 @@ function UI.Create()
 
   frame.historyBox = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
   frame.historyBox:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -120)
-  frame.historyBox:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -28, 40)
+  frame.historyBox:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -28, 72)
 
   frame.historyText = CreateFrame("EditBox", nil, frame.historyBox)
   frame.historyText:SetMultiLine(true)
@@ -483,6 +500,19 @@ function UI.Create()
     self:ClearFocus()
   end)
   frame.historyBox:SetScrollChild(frame.historyText)
+
+  frame.chatInput = CreateFrame("EditBox", nil, frame, "InputBoxTemplate")
+  frame.chatInput:SetSize(780, 20)
+  frame.chatInput:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 16, 42)
+  frame.chatInput:SetAutoFocus(false)
+  frame.chatInput:SetTextInsets(6, 6, 0, 0)
+  frame.chatInput:SetScript("OnEnterPressed", function(self)
+    sendChatMessageFromInput()
+    self:ClearFocus()
+  end)
+  frame.chatInput:SetScript("OnEscapePressed", function(self)
+    self:ClearFocus()
+  end)
 
   UI.frame = frame
   return frame
@@ -593,6 +623,7 @@ function UI.Refresh()
   frame.refreshButton:SetShown(rosterSelected)
   frame.debugButton:SetShown(rosterSelected)
   frame.historyHeader:SetShown(not rosterSelected)
+  frame.chatInput:SetShown(not rosterSelected)
   for _, header in ipairs(frame.rosterHeaders) do
     header:SetShown(rosterSelected)
   end
