@@ -353,27 +353,32 @@ local function sendChatMessageFromInput()
 end
 
 local function updateHistoryScrollBar()
-  if not UI.frame or not UI.frame.historyBox or not UI.frame.historyScrollBar then
+  if not UI.frame or not UI.frame.historyBox or not UI.frame.historyScrollIndicator then
     return
   end
 
   local box = UI.frame.historyBox
-  local bar = UI.frame.historyScrollBar
+  local indicator = UI.frame.historyScrollIndicator
+  local thumb = indicator.thumb
   local total = box.GetNumMessages and box:GetNumMessages() or 0
   local current = box.GetCurrentScroll and box:GetCurrentScroll() or 0
   local maxValue = math.max(0, total - 1)
 
-  bar:SetMinMaxValues(0, maxValue)
-  bar.updating = true
-  bar:SetValue(math.min(current, maxValue))
-  bar.updating = false
+  if maxValue <= 0 then
+    indicator:Hide()
+    return
+  end
 
-  if bar.ScrollUpButton then
-    bar.ScrollUpButton:SetEnabled(not (box.AtTop and box:AtTop()))
-  end
-  if bar.ScrollDownButton then
-    bar.ScrollDownButton:SetEnabled(not (box.AtBottom and box:AtBottom()))
-  end
+  indicator:Show()
+
+  local indicatorHeight = indicator:GetHeight()
+  local thumbHeight = math.max(24, math.floor(indicatorHeight * 0.2))
+  thumb:SetHeight(thumbHeight)
+
+  local travel = math.max(0, indicatorHeight - thumbHeight)
+  local ratio = maxValue > 0 and (math.min(current, maxValue) / maxValue) or 0
+  thumb:ClearAllPoints()
+  thumb:SetPoint("TOP", indicator, "TOP", 0, -math.floor(travel * ratio))
 end
 
 local function scrollHistoryToBottom()
@@ -536,42 +541,20 @@ function UI.Create()
     updateHistoryScrollBar()
   end)
 
-  frame.historyScrollBar = CreateFrame("Slider", nil, frame, "UIPanelScrollBarTemplate")
-  frame.historyScrollBar:SetPoint("TOPLEFT", frame.historyBox, "TOPRIGHT", 4, -16)
-  frame.historyScrollBar:SetPoint("BOTTOMLEFT", frame.historyBox, "BOTTOMRIGHT", 4, 16)
-  frame.historyScrollBar:SetMinMaxValues(0, 0)
-  frame.historyScrollBar:SetValueStep(1)
-  frame.historyScrollBar:SetObeyStepOnDrag(true)
-  frame.historyScrollBar:SetScript("OnValueChanged", function(self, value)
-    if self.updating then
-      return
-    end
+  frame.historyScrollIndicator = CreateFrame("Frame", nil, frame)
+  frame.historyScrollIndicator:SetPoint("TOPLEFT", frame.historyBox, "TOPRIGHT", 8, 0)
+  frame.historyScrollIndicator:SetPoint("BOTTOMLEFT", frame.historyBox, "BOTTOMRIGHT", 8, 0)
+  frame.historyScrollIndicator:SetWidth(6)
+  frame.historyScrollIndicator:Hide()
 
-    local box = frame.historyBox
-    local current = box.GetCurrentScroll and box:GetCurrentScroll() or 0
-    local target = math.floor((value or 0) + 0.5)
+  frame.historyScrollIndicator.track = frame.historyScrollIndicator:CreateTexture(nil, "BACKGROUND")
+  frame.historyScrollIndicator.track:SetAllPoints(frame.historyScrollIndicator)
+  frame.historyScrollIndicator.track:SetColorTexture(1, 1, 1, 0.08)
 
-    while current < target do
-      box:ScrollUp()
-      current = current + 1
-    end
-
-    while current > target do
-      box:ScrollDown()
-      current = current - 1
-    end
-
-    updateHistoryScrollBar()
-  end)
-
-  frame.historyScrollBar.ScrollUpButton:SetScript("OnClick", function()
-    frame.historyBox:ScrollUp()
-    updateHistoryScrollBar()
-  end)
-  frame.historyScrollBar.ScrollDownButton:SetScript("OnClick", function()
-    frame.historyBox:ScrollDown()
-    updateHistoryScrollBar()
-  end)
+  frame.historyScrollIndicator.thumb = frame.historyScrollIndicator:CreateTexture(nil, "ARTWORK")
+  frame.historyScrollIndicator.thumb:SetWidth(6)
+  frame.historyScrollIndicator.thumb:SetColorTexture(1, 1, 1, 0.35)
+  frame.historyScrollIndicator.thumb:SetPoint("TOP", frame.historyScrollIndicator, "TOP", 0, 0)
 
   frame.chatInput = CreateFrame("EditBox", nil, frame, "InputBoxTemplate")
   frame.chatInput:SetSize(780, 20)
@@ -711,7 +694,7 @@ function UI.Refresh()
 
   frame.scrollFrame:SetShown(rosterSelected)
   frame.historyBox:SetShown(not rosterSelected)
-  frame.historyScrollBar:SetShown(not rosterSelected)
+  frame.historyScrollIndicator:SetShown(not rosterSelected)
   frame.emptyState:SetShown(rosterSelected)
 
   if rosterSelected then
