@@ -22,6 +22,29 @@ local HISTORY_LABELS = {
   guild_changed = "guild changed",
 }
 
+local CLASS_ICON_TEXTURE = "Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES"
+
+local function getClassColor(classFile)
+  local colors = CUSTOM_CLASS_COLORS or RAID_CLASS_COLORS
+  return colors and colors[classFile or ""] or nil
+end
+
+local function getClassIconTag(classFile)
+  local coords = CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[classFile or ""]
+  if not coords then
+    return nil
+  end
+
+  return string.format(
+    "|T%s:14:14:0:0:256:256:%d:%d:%d:%d|t",
+    CLASS_ICON_TEXTURE,
+    coords[1] * 256,
+    coords[2] * 256,
+    coords[3] * 256,
+    coords[4] * 256
+  )
+end
+
 local function createCheckLabel(checkButton, text)
   local label = checkButton:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   label:SetPoint("LEFT", checkButton, "RIGHT", 2, 1)
@@ -38,10 +61,24 @@ local function createLabel(parent, width, justify)
 end
 
 local function setRowTexts(row, member)
+  local classColor = getClassColor(member.classFile)
+  if classColor then
+    row.name:SetTextColor(classColor.r, classColor.g, classColor.b)
+  else
+    row.name:SetTextColor(1, 1, 1)
+  end
+
   row.addon:SetText(member.hasAddon and "Y" or "-")
   row.name:SetText(member.name or "")
   row.level:SetText(member.level and member.level > 0 and tostring(member.level) or "?")
-  row.class:SetText(member.classFile ~= "" and member.classFile or "?")
+
+  local classIcon = getClassIconTag(member.classFile)
+  if classIcon then
+    row.class:SetText(classIcon .. " " .. member.classFile)
+  else
+    row.class:SetText(member.classFile ~= "" and member.classFile or "?")
+  end
+
   row.zone:SetText(member.zone ~= "" and member.zone or "?")
   row.guild:SetText(member.guildName ~= "" and member.guildName or "?")
   row.lastSeen:SetText(member.isOnlineInChannel and "Online" or Utils.FormatLastSeen(member.lastSeenAt))
