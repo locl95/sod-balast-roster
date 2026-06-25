@@ -353,12 +353,13 @@ local function sendChatMessageFromInput()
 end
 
 local function scrollHistoryToBottom()
-  if not UI.frame or not UI.frame.historyBox or not UI.frame.historyText then
+  if not UI.frame or not UI.frame.historyBox then
     return
   end
 
-  local maxScroll = math.max(0, UI.frame.historyText:GetHeight() - UI.frame.historyBox:GetHeight())
-  UI.frame.historyBox:SetVerticalScroll(maxScroll)
+  if UI.frame.historyBox.ScrollToBottom then
+    UI.frame.historyBox:ScrollToBottom()
+  end
 end
 
 function UI.Create()
@@ -490,21 +491,22 @@ function UI.Create()
     FauxScrollFrame_OnVerticalScroll(self, offset, ROW_HEIGHT, UI.RefreshRoster)
   end)
 
-  frame.historyBox = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
-  frame.historyBox:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -96)
-  frame.historyBox:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -28, 68)
-
-  frame.historyText = CreateFrame("EditBox", nil, frame.historyBox)
-  frame.historyText:SetMultiLine(true)
-  frame.historyText:SetFontObject(ChatFontNormal)
-  frame.historyText:SetWidth(800)
-  frame.historyText:SetHeight(1)
-  frame.historyText:SetAutoFocus(false)
-  frame.historyText:EnableMouse(false)
-  frame.historyText:SetScript("OnEscapePressed", function(self)
-    self:ClearFocus()
+  frame.historyBox = CreateFrame("ScrollingMessageFrame", nil, frame)
+  frame.historyBox:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -96)
+  frame.historyBox:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -36, 68)
+  frame.historyBox:SetFontObject(ChatFontNormal)
+  frame.historyBox:SetJustifyH("LEFT")
+  frame.historyBox:SetFading(false)
+  frame.historyBox:SetIndentedWordWrap(false)
+  frame.historyBox:SetMaxLines(1000)
+  frame.historyBox:EnableMouseWheel(true)
+  frame.historyBox:SetScript("OnMouseWheel", function(self, delta)
+    if delta > 0 then
+      self:ScrollUp()
+    else
+      self:ScrollDown()
+    end
   end)
-  frame.historyBox:SetScrollChild(frame.historyText)
 
   frame.chatInput = CreateFrame("EditBox", nil, frame, "InputBoxTemplate")
   frame.chatInput:SetSize(780, 20)
@@ -599,8 +601,11 @@ function UI.RefreshHistory()
   end
 
   local text = #lines > 0 and table.concat(lines, "\n") or "No history yet."
-  frame.historyText:SetText(text)
-  frame.historyText:SetHeight(math.max(frame.historyText:GetTextHeight() + 8, 1))
+  frame.historyBox:Clear()
+
+  for line in string.gmatch(text, "([^\n]+)") do
+    frame.historyBox:AddMessage(line)
+  end
 
   C_Timer.After(0, scrollHistoryToBottom)
   C_Timer.After(0.05, scrollHistoryToBottom)
