@@ -54,16 +54,16 @@ local function createRow(parent, index)
   row:SetPoint("TOPLEFT", parent, "TOPLEFT", 8, -120 - ((index - 1) * ROW_HEIGHT))
   row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 
-  row.online = createLabel(row, 28, "CENTER")
+  row.online = createLabel(row, 28, "LEFT")
   row.online:SetPoint("LEFT", row, "LEFT", 0, 0)
 
   row.name = createLabel(row, 150, "LEFT")
   row.name:SetPoint("LEFT", row.online, "RIGHT", 4, 0)
 
-  row.addon = createLabel(row, 42, "CENTER")
+  row.addon = createLabel(row, 42, "LEFT")
   row.addon:SetPoint("LEFT", row.name, "RIGHT", 4, 0)
 
-  row.level = createLabel(row, 40, "CENTER")
+  row.level = createLabel(row, 40, "LEFT")
   row.level:SetPoint("LEFT", row.addon, "RIGHT", 4, 0)
 
   row.class = createLabel(row, 90, "LEFT")
@@ -75,7 +75,7 @@ local function createRow(parent, index)
   row.guild = createLabel(row, 170, "LEFT")
   row.guild:SetPoint("LEFT", row.zone, "RIGHT", 4, 0)
 
-  row.lastSeen = createLabel(row, 70, "RIGHT")
+  row.lastSeen = createLabel(row, 70, "LEFT")
   row.lastSeen:SetPoint("LEFT", row.guild, "RIGHT", 4, 0)
 
   row:SetScript("OnDoubleClick", function(self)
@@ -145,8 +145,8 @@ function UI.Create()
   frame.title:SetPoint("LEFT", frame.TitleBg, "LEFT", 8, 0)
   frame.title:SetText("SodBalastRoster")
 
-  frame.rosterTab = createTabButton(frame, "Roster", 180, TAB_ROSTER)
-  frame.historyTab = createTabButton(frame, "History", 278, TAB_HISTORY)
+  frame.rosterTab = createTabButton(frame, "Roster", 12, TAB_ROSTER)
+  frame.historyTab = createTabButton(frame, "Chat", 110, TAB_HISTORY)
 
   frame.onlyOnline = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
   frame.onlyOnline:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -60)
@@ -232,7 +232,7 @@ function UI.Create()
 
   frame.historyHeader = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   frame.historyHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -96)
-  frame.historyHeader:SetText("Channel History")
+  frame.historyHeader:SetText("Channel Chat")
 
   for index = 1, VISIBLE_ROWS do
     UI.rows[index] = createRow(frame, index)
@@ -299,9 +299,6 @@ function UI.RefreshRoster()
   end
 
   local statusText = string.format("Online %d  Addon %d  Total %d", online, withAddon, total)
-  if ns.Core and ns.Core.lastDebugSummary then
-    statusText = statusText .. "  |  " .. ns.Core.lastDebugSummary
-  end
   frame.status:SetText(statusText)
 
   if total == 0 then
