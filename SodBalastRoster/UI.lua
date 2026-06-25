@@ -352,35 +352,6 @@ local function sendChatMessageFromInput()
   frame.chatInput:SetText("")
 end
 
-local function updateHistoryScrollBar()
-  if not UI.frame or not UI.frame.historyBox or not UI.frame.historyScrollIndicator then
-    return
-  end
-
-  local box = UI.frame.historyBox
-  local indicator = UI.frame.historyScrollIndicator
-  local thumb = indicator.thumb
-  local total = box.GetNumMessages and box:GetNumMessages() or 0
-  local current = box.GetCurrentScroll and box:GetCurrentScroll() or 0
-  local maxValue = math.max(0, total - 1)
-
-  if maxValue <= 0 then
-    indicator:Hide()
-    return
-  end
-
-  indicator:Show()
-
-  local indicatorHeight = indicator:GetHeight()
-  local thumbHeight = math.max(24, math.floor(indicatorHeight * 0.2))
-  thumb:SetHeight(thumbHeight)
-
-  local travel = math.max(0, indicatorHeight - thumbHeight)
-  local ratio = maxValue > 0 and (math.min(current, maxValue) / maxValue) or 0
-  thumb:ClearAllPoints()
-  thumb:SetPoint("TOP", indicator, "TOP", 0, -math.floor(travel * ratio))
-end
-
 local function scrollHistoryToBottom()
   if not UI.frame or not UI.frame.historyBox then
     return
@@ -389,8 +360,6 @@ local function scrollHistoryToBottom()
   if UI.frame.historyBox.ScrollToBottom then
     UI.frame.historyBox:ScrollToBottom()
   end
-
-  updateHistoryScrollBar()
 end
 
 function UI.Create()
@@ -537,25 +506,7 @@ function UI.Create()
     else
       self:ScrollDown()
     end
-
-    updateHistoryScrollBar()
   end)
-
-  frame.historyScrollIndicator = CreateFrame("Frame", nil, frame)
-  frame.historyScrollIndicator:SetPoint("TOPLEFT", frame.historyBox, "TOPRIGHT", 8, 0)
-  frame.historyScrollIndicator:SetPoint("BOTTOMLEFT", frame.historyBox, "BOTTOMRIGHT", 8, 0)
-  frame.historyScrollIndicator:SetWidth(6)
-  frame.historyScrollIndicator:EnableMouse(false)
-  frame.historyScrollIndicator:Hide()
-
-  frame.historyScrollIndicator.track = frame.historyScrollIndicator:CreateTexture(nil, "BACKGROUND")
-  frame.historyScrollIndicator.track:SetAllPoints(frame.historyScrollIndicator)
-  frame.historyScrollIndicator.track:SetColorTexture(1, 1, 1, 0.08)
-
-  frame.historyScrollIndicator.thumb = frame.historyScrollIndicator:CreateTexture(nil, "ARTWORK")
-  frame.historyScrollIndicator.thumb:SetWidth(6)
-  frame.historyScrollIndicator.thumb:SetColorTexture(1, 1, 1, 0.35)
-  frame.historyScrollIndicator.thumb:SetPoint("TOP", frame.historyScrollIndicator, "TOP", 0, 0)
 
   frame.chatInput = CreateFrame("EditBox", nil, frame, "InputBoxTemplate")
   frame.chatInput:SetSize(780, 20)
@@ -658,7 +609,6 @@ function UI.RefreshHistory()
 
   C_Timer.After(0, scrollHistoryToBottom)
   C_Timer.After(0.05, scrollHistoryToBottom)
-  C_Timer.After(0.05, updateHistoryScrollBar)
   frame.status:SetText("")
 end
 
@@ -695,7 +645,6 @@ function UI.Refresh()
 
   frame.scrollFrame:SetShown(rosterSelected)
   frame.historyBox:SetShown(not rosterSelected)
-  frame.historyScrollIndicator:SetShown(not rosterSelected)
   frame.emptyState:SetShown(rosterSelected)
 
   if rosterSelected then
