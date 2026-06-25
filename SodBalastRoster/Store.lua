@@ -61,7 +61,9 @@ function Store.GetMember(name)
     hasAddon = false,
     firstSeenAt = 0,
     lastSeenAt = 0,
+    missingScans = 0,
     lastProfileAt = 0,
+    lastWhoProfileAt = 0,
     lastHistorySyncAt = 0,
     lastHistoryRequestedAt = 0,
     lastHistoryAdvertisedAt = 0,
@@ -70,6 +72,7 @@ function Store.GetMember(name)
     zone = "",
     guildName = "",
     lastRequestedAt = 0,
+    lastWhoRequestedAt = 0,
   }
 
   return roster[name]
@@ -101,6 +104,7 @@ function Store.MarkSeenInChannel(name, timestamp)
 
   member.isOnlineInChannel = true
   member.lastSeenAt = timestamp
+  member.missingScans = 0
 
   return member, not wasOnline
 end
@@ -112,15 +116,23 @@ function Store.MarkOffline(name)
   end
 
   member.isOnlineInChannel = false
+  member.missingScans = 0
   return member, true
 end
 
-function Store.MarkMissingFromChannel(activeNames)
+function Store.MarkMissingFromChannel(activeNames, threshold)
+  threshold = threshold or ns.Constants.fullMissingThreshold or 2
   local changed = {}
   for _, member in pairs(Store.GetRoster()) do
     if member.isOnlineInChannel and not activeNames[member.name] then
-      member.isOnlineInChannel = false
-      changed[#changed + 1] = member
+      member.missingScans = (member.missingScans or 0) + 1
+      if member.missingScans >= threshold then
+        member.isOnlineInChannel = false
+        member.missingScans = 0
+        changed[#changed + 1] = member
+      end
+    elseif member.isOnlineInChannel then
+      member.missingScans = 0
     end
   end
   return changed
@@ -163,6 +175,42 @@ function Store.SetProfile(name, profile, timestamp)
   return member, changes
 end
 
+function Store.SetWhoProfile(name, profile, timestamp)
+  local member = Store.GetMember(name)
+  if not member then
+    return nil, nil
+  end
+
+  local changes = {}
+
+  local function apply(field, value)
+    value = value or ""
+    if member[field] ~= value then
+      changes[field] = {
+        old = member[field],
+        new = value,
+      }
+      member[field] = value
+    end
+  end
+
+  if profile.level and tonumber(profile.level) then
+    local level = tonumber(profile.level)
+    if member.level ~= level then
+      changes.level = { old = member.level, new = level }
+      member.level = level
+    end
+  end
+
+  apply("classFile", profile.classFile)
+  apply("zone", profile.zone)
+  apply("guildName", profile.guildName)
+
+  member.lastWhoProfileAt = timestamp
+
+  return member, changes
+end
+
 function Store.ShouldRequestProfile(member, timestamp)
   if not member then
     return false
@@ -179,6 +227,26 @@ function Store.MarkProfileRequested(name, timestamp)
   local member = Store.GetMember(name)
   if member then
     member.lastRequestedAt = timestamp
+  end
+end
+
+function Store.ShouldRequestWho(member, timestamp)
+  if not member or member.hasAddon then
+    return false
+  end
+
+  local hasProfile = (member.level or 0) > 0 and member.classFile ~= "" and member.zone ~= ""
+  if hasProfile and timestamp - (member.lastWhoProfileAt or 0) < ns.Constants.whoProfileTTL then
+    return false
+  end
+
+  return timestamp - (member.lastWhoRequestedAt or 0) >= ns.Constants.whoRequestInterval
+end
+
+function Store.MarkWhoRequested(name, timestamp)
+  local member = Store.GetMember(name)
+  if member then
+    member.lastWhoRequestedAt = timestamp
   end
 end
 

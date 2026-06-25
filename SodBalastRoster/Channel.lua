@@ -99,6 +99,10 @@ function Channel.ScanRoster()
       if member and member.name ~= Utils.PlayerName() and (justJoined or Store.ShouldRequestProfile(member, timestamp)) then
         ns.Comm.QueueProfileRequest(member.name)
       end
+
+      if member and member.name ~= Utils.PlayerName() and Store.ShouldRequestWho(member, timestamp) then
+        ns.Who.QueueRequest(member.name)
+      end
     end
   end
 
@@ -110,13 +114,21 @@ function Channel.ScanRoster()
     Channel.lastScanReason = "roster_names_unresolved"
   end
 
-  local missingMembers = Store.MarkMissingFromChannel(activeNames)
-  for _, member in ipairs(missingMembers) do
-    History.Add("left_channel", member.name)
+  local canMarkMissing = (memberCount or 0) == 0 or Channel.lastResolvedCount == (memberCount or 0)
+  if not canMarkMissing and Channel.lastResolvedCount > 0 then
+    Channel.lastScanReason = "partial_roster_resolved"
+  end
+
+  local missingThreshold = canMarkMissing and ns.Constants.fullMissingThreshold or ns.Constants.partialMissingThreshold
+  if canMarkMissing or Channel.lastResolvedCount > 0 then
+    local missingMembers = Store.MarkMissingFromChannel(activeNames, missingThreshold)
+    for _, member in ipairs(missingMembers) do
+      History.Add("left_channel", member.name)
+    end
   end
 
   Channel.lastScanOk = true
-  if Channel.lastScanReason ~= "roster_names_unresolved" then
+  if Channel.lastScanReason ~= "roster_names_unresolved" and Channel.lastScanReason ~= "partial_roster_resolved" then
     Channel.lastScanReason = nil
   end
   return true, nil

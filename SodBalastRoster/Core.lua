@@ -142,6 +142,12 @@ Core:SetScript("OnEvent", function(_, event, ...)
   if event == "CHAT_MSG_ADDON" then
     ns.Comm.HandleAddonMessage(...)
     refreshUI()
+    return
+  end
+
+  if event == "WHO_LIST_UPDATE" then
+    ns.Who.HandleWhoListUpdate()
+    refreshUI()
   end
 end)
 
@@ -154,6 +160,8 @@ Core:SetScript("OnUpdate", function(_, elapsed)
 
   Core.elapsed = 0
   ns.Comm.FlushQueue()
+  ns.Who.CheckTimeout()
+  ns.Who.FlushQueue()
   ns.Comm.MaybeBroadcastHistorySummary()
 
   if ns.Channel.ShouldScan() then
@@ -170,3 +178,4 @@ Core:RegisterEvent("CHANNEL_UI_UPDATE")
 Core:RegisterEvent("CHAT_MSG_CHANNEL_NOTICE")
 Core:RegisterEvent("CHAT_MSG_CHANNEL")
 Core:RegisterEvent("CHAT_MSG_ADDON")
+Core:RegisterEvent("WHO_LIST_UPDATE")

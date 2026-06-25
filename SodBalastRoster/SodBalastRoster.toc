@@ -10,5 +10,6 @@ Store.lua
 History.lua
 Channel.lua
 Comm.lua
+Who.lua
 UI.lua
 Core.lua
