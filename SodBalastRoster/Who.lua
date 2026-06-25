@@ -91,11 +91,33 @@ function Who.HandleWhoListUpdate()
   local count = getWhoCount()
   local targetName = Who.activeName
   local applied = 0
+  local firstMatch = nil
+  local firstResult = nil
 
   for index = 1, count do
     local name, guild, level, _, classFile, zone = getWhoInfo(index)
     name = Utils.NormalizeName(name)
     if name then
+      if not firstResult then
+        firstResult = {
+          name = name,
+          guild = guild,
+          level = level,
+          classFile = classFile,
+          zone = zone,
+        }
+      end
+
+      if targetName and name == targetName then
+        firstMatch = {
+          name = name,
+          guild = guild,
+          level = level,
+          classFile = classFile,
+          zone = zone,
+        }
+      end
+
       local member = Store.GetMember(name)
       if member and member.name == name and member.isOnlineInChannel then
         applyWhoResult(name, guild, level, classFile, zone)
@@ -108,8 +130,18 @@ function Who.HandleWhoListUpdate()
     end
   end
 
+  if targetName and applied == 0 and firstMatch then
+    applyWhoResult(targetName, firstMatch.guild, firstMatch.level, firstMatch.classFile, firstMatch.zone)
+    ns.Utils.Print("who applied target: " .. targetName)
+    applied = applied + 1
+  elseif targetName and applied == 0 and count == 1 and firstResult then
+    applyWhoResult(targetName, firstResult.guild, firstResult.level, firstResult.classFile, firstResult.zone)
+    ns.Utils.Print("who applied single result: " .. targetName)
+    applied = applied + 1
+  end
+
   if targetName and applied == 0 then
-    ns.Utils.Print("who no match: " .. targetName)
+    ns.Utils.Print("who no match: " .. targetName .. " (results=" .. tostring(count) .. ")")
   end
 
   Who.activeName = nil
