@@ -99,6 +99,16 @@ function Store.MarkSeenInChannel(name, timestamp)
   return member, not wasOnline
 end
 
+function Store.MarkOffline(name)
+  local member = Store.GetMember(name)
+  if not member or not member.isOnlineInChannel then
+    return nil, false
+  end
+
+  member.isOnlineInChannel = false
+  return member, true
+end
+
 function Store.MarkMissingFromChannel(activeNames)
   local changed = {}
   for _, member in pairs(Store.GetRoster()) do
@@ -215,4 +225,17 @@ function Store.GetVisibleRoster()
   end)
 
   return results
+end
+
+function Store.GetOnlineAddonMembers()
+  local names = {}
+
+  for _, member in pairs(Store.GetRoster()) do
+    if member.isOnlineInChannel and member.hasAddon and member.name ~= Utils.PlayerName() then
+      names[#names + 1] = member.name
+    end
+  end
+
+  table.sort(names)
+  return names
 end

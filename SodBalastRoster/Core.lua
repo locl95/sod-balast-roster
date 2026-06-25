@@ -118,6 +118,11 @@ Core:SetScript("OnEvent", function(_, event, ...)
     return
   end
 
+  if event == "PLAYER_LOGOUT" then
+    ns.Comm.BroadcastBye()
+    return
+  end
+
   if event == "CHANNEL_UI_UPDATE" or event == "CHAT_MSG_CHANNEL_NOTICE" then
     ns.Channel.ScanRoster()
     refreshUI()
@@ -158,6 +163,7 @@ end)
 
 Core:RegisterEvent("PLAYER_LOGIN")
 Core:RegisterEvent("PLAYER_ENTERING_WORLD")
+Core:RegisterEvent("PLAYER_LOGOUT")
 Core:RegisterEvent("CHANNEL_UI_UPDATE")
 Core:RegisterEvent("CHAT_MSG_CHANNEL_NOTICE")
 Core:RegisterEvent("CHAT_MSG_CHANNEL")

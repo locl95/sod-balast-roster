@@ -70,6 +70,28 @@ function Comm.SendInfo(target)
   sendAddonWhisper(payload, target)
 end
 
+function Comm.SendBye(target)
+  if not target then
+    return
+  end
+
+  local playerName = Utils.PlayerName() or ""
+  local payload = table.concat({
+    "BYE",
+    ns.Constants.protocolVersion,
+    playerName,
+  }, ";")
+
+  sendAddonWhisper(payload, target)
+end
+
+function Comm.BroadcastBye()
+  local peers = Store.GetOnlineAddonMembers()
+  for _, name in ipairs(peers) do
+    Comm.SendBye(name)
+  end
+end
+
 function Comm.FlushQueue()
   if #Comm.queue == 0 then
     return
@@ -147,5 +169,14 @@ function Comm.HandleAddonMessage(prefix, text, _, sender)
 
   if messageType == "INFO" then
     Comm.HandleInfo(parts, senderName)
+    return
+  end
+
+  if messageType == "BYE" then
+    local name = Utils.NormalizeName(parts[3]) or senderName
+    local member, changed = Store.MarkOffline(name)
+    if changed and member then
+      History.Add("left_channel", member.name, "logout")
+    end
   end
 end

@@ -45,7 +45,7 @@ local function setRowTexts(row, member)
   row.class:SetText(member.classFile ~= "" and member.classFile or "?")
   row.zone:SetText(member.zone ~= "" and member.zone or "?")
   row.guild:SetText(member.guildName ~= "" and member.guildName or "?")
-  row.lastSeen:SetText(Utils.FormatLastSeen(member.lastSeenAt))
+  row.lastSeen:SetText(member.isOnlineInChannel and "Online" or Utils.FormatLastSeen(member.lastSeenAt))
 end
 
 local function createRow(parent, index)
@@ -218,7 +218,7 @@ function UI.Create()
     { text = "Class", x = 288, width = 90 },
     { text = "Zone", x = 382, width = 180 },
     { text = "Guild", x = 566, width = 170 },
-    { text = "Seen", x = 740, width = 70 },
+    { text = "Last Seen", x = 740, width = 70 },
   }
 
   for _, header in ipairs(headers) do
