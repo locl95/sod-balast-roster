@@ -352,6 +352,15 @@ local function sendChatMessageFromInput()
   frame.chatInput:SetText("")
 end
 
+local function scrollHistoryToBottom()
+  if not UI.frame or not UI.frame.historyBox or not UI.frame.historyText then
+    return
+  end
+
+  local maxScroll = math.max(0, UI.frame.historyText:GetHeight() - UI.frame.historyBox:GetHeight())
+  UI.frame.historyBox:SetVerticalScroll(maxScroll)
+end
+
 function UI.Create()
   if UI.frame then
     return UI.frame
@@ -593,14 +602,8 @@ function UI.RefreshHistory()
   frame.historyText:SetText(text)
   frame.historyText:SetHeight(math.max(frame.historyText:GetTextHeight() + 8, 1))
 
-  C_Timer.After(0, function()
-    if not UI.frame or not UI.frame.historyBox or not UI.frame.historyText then
-      return
-    end
-
-    local maxScroll = math.max(0, UI.frame.historyText:GetHeight() - UI.frame.historyBox:GetHeight())
-    UI.frame.historyBox:SetVerticalScroll(maxScroll)
-  end)
+  C_Timer.After(0, scrollHistoryToBottom)
+  C_Timer.After(0.05, scrollHistoryToBottom)
   frame.status:SetText("")
 end
 
