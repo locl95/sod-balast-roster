@@ -390,17 +390,22 @@ function UI.RefreshHistory()
   local frame = UI.Create()
   local lines = {}
   local entries = ns.History.GetEntries()
+  local previousScroll = frame.historyBox:GetVerticalScroll() or 0
 
   for index = 1, #entries do
     local entry = entries[index]
-    lines[#lines + 1] = formatHistoryEntry(entry)
+    if entry.type == "channel_message" then
+      lines[#lines + 1] = formatHistoryEntry(entry)
+    end
   end
 
   local text = #lines > 0 and table.concat(lines, "\n") or "No history yet."
   frame.historyText:SetText(text)
   frame.historyText:SetHeight(math.max(1, math.max(#lines, 1) * 14))
-  frame.historyBox:SetVerticalScroll(0)
-  frame.status:SetText(string.format("History entries %d", #entries))
+
+  local maxScroll = math.max(0, frame.historyText:GetHeight() - frame.historyBox:GetHeight())
+  frame.historyBox:SetVerticalScroll(math.min(previousScroll, maxScroll))
+  frame.status:SetText(string.format("Chat messages %d", #lines))
 end
 
 function UI.Refresh()
