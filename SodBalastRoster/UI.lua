@@ -29,18 +29,12 @@ local function openNameMenu(anchor, member)
     return
   end
 
-  if FriendsFrame_ShowDropdown then
-    FriendsFrame_ShowDropdown(member.name, member.isOnlineInChannel)
-    return
-  end
-
   if UnitPopup_ShowMenu then
     if not UI.blizzardDropdown then
       UI.blizzardDropdown = CreateFrame("Frame", "SodBalastRosterBlizzardDropdown", UIParent, "UIDropDownMenuTemplate")
     end
 
-    local menuType = member.isOnlineInChannel and "FRIEND" or "FRIEND_OFFLINE"
-    UnitPopup_ShowMenu(UI.blizzardDropdown, menuType, nil, member.name)
+    UnitPopup_ShowMenu(UI.blizzardDropdown, "PLAYER", nil, member.name)
     return
   end
 
