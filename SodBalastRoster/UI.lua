@@ -55,7 +55,7 @@ local function createRow(parent, index)
   row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 
   row.online = createLabel(row, 28, "LEFT")
-  row.online:SetPoint("LEFT", row, "LEFT", 0, 0)
+  row.online:SetPoint("LEFT", row, "LEFT", 4, 0)
 
   row.name = createLabel(row, 150, "LEFT")
   row.name:SetPoint("LEFT", row.online, "RIGHT", 4, 0)
