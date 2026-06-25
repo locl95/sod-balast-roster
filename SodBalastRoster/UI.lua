@@ -45,6 +45,21 @@ local function getClassIconTag(classFile)
   )
 end
 
+local function colorizeName(name)
+  local member = Store.GetMember(name)
+  local classColor = member and getClassColor(member.classFile) or nil
+  if not classColor then
+    return name or "?"
+  end
+
+  return string.format("|cff%02x%02x%02x%s|r",
+    math.floor((classColor.r or 1) * 255),
+    math.floor((classColor.g or 1) * 255),
+    math.floor((classColor.b or 1) * 255),
+    name or "?"
+  )
+end
+
 local function createCheckLabel(checkButton, text)
   local label = checkButton:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   label:SetPoint("LEFT", checkButton, "RIGHT", 2, 1)
@@ -74,7 +89,7 @@ local function setRowTexts(row, member)
 
   local classIcon = getClassIconTag(member.classFile)
   if classIcon then
-    row.class:SetText(classIcon .. " " .. member.classFile)
+    row.class:SetText(classIcon)
   else
     row.class:SetText(member.classFile ~= "" and member.classFile or "?")
   end
@@ -144,15 +159,15 @@ end
 
 local function formatHistoryEntry(entry)
   if entry.type == "channel_message" then
-    return string.format("[%s] <%s> %s", date("%H:%M:%S", entry.at), entry.name, entry.details or "")
+    return string.format("[%s] <%s> %s", date("%H:%M:%S", entry.at), colorizeName(entry.name), entry.details or "")
   end
 
   local label = HISTORY_LABELS[entry.type] or entry.type
   if entry.details and entry.details ~= "" then
-    return string.format("[%s] %s: %s (%s)", date("%H:%M:%S", entry.at), entry.name, label, entry.details)
+    return string.format("[%s] %s: %s (%s)", date("%H:%M:%S", entry.at), colorizeName(entry.name), label, entry.details)
   end
 
-  return string.format("[%s] %s: %s", date("%H:%M:%S", entry.at), entry.name, label)
+  return string.format("[%s] %s: %s", date("%H:%M:%S", entry.at), colorizeName(entry.name), label)
 end
 
 function UI.Create()
