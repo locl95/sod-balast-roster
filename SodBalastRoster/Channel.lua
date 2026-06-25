@@ -14,6 +14,20 @@ local Channel = {
 }
 ns.Channel = Channel
 
+local function getChannelRosterName(channelIndex, rosterIndex)
+  if C_ChatInfo and C_ChatInfo.GetChannelRosterInfo then
+    local name = C_ChatInfo.GetChannelRosterInfo(channelIndex, rosterIndex)
+    return name
+  end
+
+  if GetChannelRosterInfo then
+    local name = GetChannelRosterInfo(channelIndex, rosterIndex)
+    return name
+  end
+
+  return nil
+end
+
 function Channel.EnsureJoined()
   local channelId = Channel.GetChannelId()
   if channelId and channelId > 0 then
@@ -71,7 +85,7 @@ function Channel.ScanRoster()
   Channel.lastFallbackPlayer = nil
 
   for rosterIndex = 1, memberCount or 0 do
-    local name = GetChannelRosterInfo(displayIndex, rosterIndex)
+    local name = getChannelRosterName(displayIndex, rosterIndex)
     name = Utils.NormalizeName(name)
 
     if name then
