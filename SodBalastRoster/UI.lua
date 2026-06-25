@@ -545,6 +545,7 @@ function UI.Create()
   frame.historyScrollIndicator:SetPoint("TOPLEFT", frame.historyBox, "TOPRIGHT", 8, 0)
   frame.historyScrollIndicator:SetPoint("BOTTOMLEFT", frame.historyBox, "BOTTOMRIGHT", 8, 0)
   frame.historyScrollIndicator:SetWidth(6)
+  frame.historyScrollIndicator:EnableMouse(false)
   frame.historyScrollIndicator:Hide()
 
   frame.historyScrollIndicator.track = frame.historyScrollIndicator:CreateTexture(nil, "BACKGROUND")
