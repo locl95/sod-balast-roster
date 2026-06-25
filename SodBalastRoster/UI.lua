@@ -612,12 +612,23 @@ function UI.RefreshHistory()
   local lines = {}
   local entries = ns.History.GetEntries()
   local previousScroll = frame.historyBox.GetCurrentScroll and frame.historyBox:GetCurrentScroll() or 0
+  local lastMessageId = nil
+
   for index = 1, #entries do
     local entry = entries[index]
     if entry.type == "channel_message" then
       lines[#lines + 1] = formatHistoryEntry(entry)
+      lastMessageId = entry.id or index
     end
   end
+
+  local signature = string.format("%d:%s", #lines, tostring(lastMessageId or "none"))
+  if frame.historyLastSignature == signature and not frame.historyShouldScrollToBottom then
+    frame.status:SetText("")
+    return
+  end
+
+  frame.historyLastSignature = signature
 
   local text = #lines > 0 and table.concat(lines, "\n") or "No history yet."
   frame.historyBox:Clear()
