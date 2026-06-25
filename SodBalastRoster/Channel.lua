@@ -11,6 +11,7 @@ local Channel = {
   lastResolvedCount = 0,
   lastResolvedNames = {},
   lastFallbackPlayer = nil,
+  stableScanCount = 0,
 }
 ns.Channel = Channel
 
@@ -71,6 +72,7 @@ function Channel.ScanRoster()
     Channel.lastResolvedCount = 0
     Channel.lastResolvedNames = {}
     Channel.lastFallbackPlayer = nil
+    Channel.stableScanCount = 0
     return false, "channel_not_visible"
   end
 
@@ -109,15 +111,22 @@ function Channel.ScanRoster()
   if Channel.lastResolvedCount == 0 and (memberCount or 0) > 0 then
     Channel.lastFallbackPlayer = Utils.PlayerName()
     Channel.lastScanReason = "roster_names_unresolved"
+    Channel.stableScanCount = 0
   end
 
   local canMarkMissing = (memberCount or 0) == 0 or Channel.lastResolvedCount == (memberCount or 0)
   if not canMarkMissing and Channel.lastResolvedCount > 0 then
     Channel.lastScanReason = "partial_roster_resolved"
+    Channel.stableScanCount = 0
+  end
+
+  if canMarkMissing then
+    Channel.stableScanCount = Channel.stableScanCount + 1
   end
 
   local missingThreshold = canMarkMissing and ns.Constants.fullMissingThreshold or ns.Constants.partialMissingThreshold
-  if canMarkMissing or Channel.lastResolvedCount > 0 then
+  local canApplyMissing = (canMarkMissing and Channel.stableScanCount >= 2) or (not canMarkMissing and Channel.lastResolvedCount > 0)
+  if canApplyMissing then
     local missingMembers = Store.MarkMissingFromChannel(activeNames, missingThreshold)
     for _, member in ipairs(missingMembers) do
       History.Add("left_channel", member.name)

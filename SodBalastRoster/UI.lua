@@ -176,6 +176,27 @@ local function createRow(parent, index)
   row.name = createLabel(row, 150, "LEFT")
   row.name:SetPoint("LEFT", row.addon, "RIGHT", 4, 0)
 
+  row.nameButton = CreateFrame("Button", nil, row)
+  row.nameButton:SetPoint("TOPLEFT", row.name, "TOPLEFT", 0, 0)
+  row.nameButton:SetPoint("BOTTOMRIGHT", row.name, "BOTTOMRIGHT", 0, 0)
+  row.nameButton:EnableMouse(true)
+  row.nameButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+  row.nameButton:SetScript("OnClick", function(self, button)
+    if not row.member then
+      return
+    end
+
+    if button == "RightButton" then
+      openNameMenu(self, row.member)
+    end
+  end)
+  row.nameButton:SetScript("OnEnter", function()
+    row.highlight:Show()
+  end)
+  row.nameButton:SetScript("OnLeave", function()
+    row.highlight:Hide()
+  end)
+
   row.level = createLabel(row, 40, "LEFT")
   row.level:SetPoint("LEFT", row.name, "RIGHT", 4, 0)
 
@@ -199,7 +220,7 @@ local function createRow(parent, index)
     self.highlight:Hide()
   end)
 
-  row:SetScript("OnMouseUp", function(self, button)
+  row:SetScript("OnClick", function(self, button)
     if not self.member then
       return
     end
