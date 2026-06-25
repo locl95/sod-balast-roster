@@ -77,3 +77,20 @@ end
 function Channel.ShouldScan()
   return Utils.Now() - Channel.lastScanAt >= ns.Constants.scanInterval
 end
+
+function Channel.DebugStatus()
+  local channelId = Channel.GetChannelId()
+  local displayIndex = Channel.FindDisplayIndex()
+  local visibleCount = 0
+
+  if displayIndex then
+    visibleCount = select(5, GetChannelDisplayInfo(displayIndex)) or 0
+  end
+
+  return {
+    channelId = channelId,
+    displayIndex = displayIndex,
+    visibleCount = visibleCount,
+    lastScanAt = Channel.lastScanAt,
+  }
+end

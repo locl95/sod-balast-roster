@@ -108,3 +108,13 @@ end
 function Utils.PlayerName()
   return Utils.NormalizeName(UnitName("player"))
 end
+
+function Utils.Print(message)
+  local prefix = "|cff33ff99SodBalastRoster|r"
+  if DEFAULT_CHAT_FRAME then
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("%s %s", prefix, tostring(message)))
+    return
+  end
+
+  print(prefix, message)
+end

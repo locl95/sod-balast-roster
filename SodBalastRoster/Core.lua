@@ -3,7 +3,46 @@ local addonName, ns = ...
 local Core = CreateFrame("Frame")
 ns.Core = Core
 
-local function refreshUI()
+local refreshUI
+
+local function safeCreateUI()
+  local ok, result = pcall(ns.UI.Create)
+  if not ok then
+    ns.Utils.Print("UI create error: " .. tostring(result))
+    return nil
+  end
+
+  return result
+end
+
+local function handleSlashCommand(message)
+  message = ns.Utils.Trim(message or "")
+
+  if message == "debug" then
+    ns.Channel.EnsureJoined()
+    local ok, reason = ns.Channel.ScanRoster()
+    local status = ns.Channel.DebugStatus()
+    ns.Utils.Print(string.format(
+      "debug channelId=%s displayIndex=%s visibleCount=%s scanOk=%s reason=%s",
+      tostring(status.channelId),
+      tostring(status.displayIndex),
+      tostring(status.visibleCount),
+      tostring(ok),
+      tostring(reason)
+    ))
+    refreshUI()
+    return
+  end
+
+  local frame = safeCreateUI()
+  if not frame then
+    return
+  end
+
+  ns.UI.Toggle()
+end
+
+refreshUI = function()
   if ns.UI and ns.UI.frame and ns.UI.frame:IsShown() then
     ns.UI.Refresh()
   end
@@ -18,15 +57,15 @@ local function initialize()
     guildName = ns.Utils.SafeGuildName(),
   }, ns.Utils.Now())
   ns.Comm.RegisterPrefix()
-  ns.UI.Create()
 
   SLASH_SODBALASTROSTER1 = "/sb"
   SLASH_SODBALASTROSTER2 = "/sbr"
-  SlashCmdList.SODBALASTROSTER = function()
-    ns.UI.Toggle()
+  SlashCmdList.SODBALASTROSTER = function(message)
+    handleSlashCommand(message)
   end
 
   ns.Channel.EnsureJoined()
+  ns.Utils.Print("loaded. Use /sb to open, /sb debug for channel diagnostics.")
   C_Timer.After(2, function()
     ns.Channel.ScanRoster()
     refreshUI()
