@@ -7,6 +7,7 @@ local Comm = {
   queue = {},
   queued = {},
   lastSendAt = 0,
+  lastHistorySummaryAt = 0,
 }
 ns.Comm = Comm
 
@@ -99,9 +100,67 @@ function Comm.SendInfo(target)
     Utils.SafeClassFile(),
     Utils.SafeZoneName(),
     Utils.SafeGuildName(),
+    tostring(History.GetLatestTimestamp()),
   }, ";")
 
   sendAddonWhisper(payload, target)
+end
+
+function Comm.QueueHistorySummary(target, latestAt)
+  target = Utils.NormalizeName(target)
+  latestAt = tonumber(latestAt) or 0
+  if not target or target == Utils.PlayerName() or latestAt <= 0 then
+    return
+  end
+
+  queueMessage(
+    target,
+    string.format("HSUM;%s;%s;%s", ns.Constants.protocolVersion, Utils.PlayerName() or "", tostring(latestAt)),
+    string.format("HSUM|%s|%s", target, tostring(latestAt))
+  )
+end
+
+function Comm.MaybeBroadcastHistorySummary()
+  if not ns.historyDirty then
+    return
+  end
+
+  local now = Utils.Now()
+  if now - Comm.lastHistorySummaryAt < ns.Constants.historySummaryCooldown then
+    return
+  end
+
+  local latestAt = History.GetLatestTimestamp()
+  if latestAt <= 0 then
+    return
+  end
+
+  local peers = Store.GetOnlineAddonMembers()
+  if #peers == 0 then
+    return
+  end
+
+  for _, name in ipairs(peers) do
+    Comm.QueueHistorySummary(name, latestAt)
+  end
+
+  Comm.lastHistorySummaryAt = now
+  ns.historyDirty = false
+end
+
+local function maybeQueueHistoryRequest(name, member, advertisedAt, now)
+  if not member or not advertisedAt or advertisedAt <= 0 then
+    return
+  end
+
+  local syncedAt = Store.GetHistorySyncAt(name)
+  if advertisedAt <= syncedAt then
+    return
+  end
+
+  if Store.ShouldRequestHistory(member, now) then
+    Comm.QueueHistoryRequest(name)
+  end
 end
 
 function Comm.SendBye(target)
@@ -160,6 +219,7 @@ function Comm.HandleInfo(parts, sender)
   local existing = Store.GetMember(name)
   local hadAddon = existing and existing.hasAddon or false
   local hadProfile = existing and (existing.lastProfileAt or 0) > 0 or false
+  local advertisedAt = tonumber(parts[8]) or 0
   local member, changes = Store.SetProfile(name, {
     level = parts[4],
     classFile = parts[5],
@@ -167,10 +227,10 @@ function Comm.HandleInfo(parts, sender)
     guildName = parts[7],
   }, Utils.Now())
 
+  Store.MarkHistoryAdvertised(name, advertisedAt)
+
   if not changes then
-    if member and Store.ShouldRequestHistory(member, Utils.Now()) then
-      Comm.QueueHistoryRequest(name)
-    end
+    maybeQueueHistoryRequest(name, member, advertisedAt, Utils.Now())
     return
   end
 
@@ -188,14 +248,23 @@ function Comm.HandleInfo(parts, sender)
     History.Add("guild_changed", name, string.format("%s -> %s", changes.guildName.old or "", changes.guildName.new or ""))
   end
 
-  if member and Store.ShouldRequestHistory(member, Utils.Now()) then
-    Comm.QueueHistoryRequest(name)
-  end
+  maybeQueueHistoryRequest(name, member, advertisedAt, Utils.Now())
 end
 
 function Comm.HandleHistoryRequest(parts, sender)
   local sinceAt = tonumber(parts[3]) or 0
   Comm.SendHistorySince(sender, sinceAt)
+end
+
+function Comm.HandleHistorySummary(parts, sender)
+  local name = Utils.NormalizeName(parts[3]) or Utils.NormalizeName(sender)
+  local advertisedAt = tonumber(parts[4]) or 0
+  if not name or advertisedAt <= 0 then
+    return
+  end
+
+  Store.MarkHistoryAdvertised(name, advertisedAt)
+  maybeQueueHistoryRequest(name, Store.GetMember(name), advertisedAt, Utils.Now())
 end
 
 function Comm.HandleHistoryEvent(parts, sender)
@@ -246,6 +315,11 @@ function Comm.HandleAddonMessage(prefix, text, _, sender)
 
   if messageType == "HREQ" then
     Comm.HandleHistoryRequest(parts, senderName)
+    return
+  end
+
+  if messageType == "HSUM" then
+    Comm.HandleHistorySummary(parts, senderName)
     return
   end
 

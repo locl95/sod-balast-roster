@@ -154,6 +154,7 @@ Core:SetScript("OnUpdate", function(_, elapsed)
 
   Core.elapsed = 0
   ns.Comm.FlushQueue()
+  ns.Comm.MaybeBroadcastHistorySummary()
 
   if ns.Channel.ShouldScan() then
     ns.Channel.EnsureJoined()

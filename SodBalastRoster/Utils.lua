@@ -9,6 +9,7 @@ ns.Constants = {
   scanInterval = 30,
   requestInterval = 1,
   profileTTL = 15 * 60,
+  historySummaryCooldown = 30,
   historySyncCooldown = 60,
   historySyncWindow = 24 * 60 * 60,
   historySyncLimit = 50,

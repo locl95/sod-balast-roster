@@ -43,6 +43,7 @@ local function insertEntry(entry)
 end
 
 function History.Init()
+  ns.historyDirty = false
   rebuildIndex()
 end
 
@@ -69,6 +70,7 @@ function History.Add(eventType, name, details)
     details = details,
   }
 
+  ns.historyDirty = true
   return insertEntry(entry)
 end
 

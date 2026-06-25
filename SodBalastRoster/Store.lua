@@ -64,6 +64,7 @@ function Store.GetMember(name)
     lastProfileAt = 0,
     lastHistorySyncAt = 0,
     lastHistoryRequestedAt = 0,
+    lastHistoryAdvertisedAt = 0,
     level = 0,
     classFile = "",
     zone = "",
@@ -209,6 +210,22 @@ function Store.MarkHistorySynced(name, timestamp)
   local member = Store.GetMember(name)
   if member and timestamp and timestamp > (member.lastHistorySyncAt or 0) then
     member.lastHistorySyncAt = timestamp
+  end
+end
+
+function Store.GetHistoryAdvertisedAt(name)
+  local member = Store.GetMember(name)
+  if not member then
+    return 0
+  end
+
+  return member.lastHistoryAdvertisedAt or 0
+end
+
+function Store.MarkHistoryAdvertised(name, timestamp)
+  local member = Store.GetMember(name)
+  if member and timestamp and timestamp > (member.lastHistoryAdvertisedAt or 0) then
+    member.lastHistoryAdvertisedAt = timestamp
   end
 end
 
