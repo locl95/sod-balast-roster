@@ -352,6 +352,30 @@ local function sendChatMessageFromInput()
   frame.chatInput:SetText("")
 end
 
+local function updateHistoryScrollBar()
+  if not UI.frame or not UI.frame.historyBox or not UI.frame.historyScrollBar then
+    return
+  end
+
+  local box = UI.frame.historyBox
+  local bar = UI.frame.historyScrollBar
+  local total = box.GetNumMessages and box:GetNumMessages() or 0
+  local current = box.GetCurrentScroll and box:GetCurrentScroll() or 0
+  local maxValue = math.max(0, total - 1)
+
+  bar:SetMinMaxValues(0, maxValue)
+  bar.updating = true
+  bar:SetValue(math.min(current, maxValue))
+  bar.updating = false
+
+  if bar.ScrollUpButton then
+    bar.ScrollUpButton:SetEnabled(not (box.AtTop and box:AtTop()))
+  end
+  if bar.ScrollDownButton then
+    bar.ScrollDownButton:SetEnabled(not (box.AtBottom and box:AtBottom()))
+  end
+end
+
 local function scrollHistoryToBottom()
   if not UI.frame or not UI.frame.historyBox then
     return
@@ -360,6 +384,8 @@ local function scrollHistoryToBottom()
   if UI.frame.historyBox.ScrollToBottom then
     UI.frame.historyBox:ScrollToBottom()
   end
+
+  updateHistoryScrollBar()
 end
 
 function UI.Create()
@@ -506,6 +532,45 @@ function UI.Create()
     else
       self:ScrollDown()
     end
+
+    updateHistoryScrollBar()
+  end)
+
+  frame.historyScrollBar = CreateFrame("Slider", nil, frame, "UIPanelScrollBarTemplate")
+  frame.historyScrollBar:SetPoint("TOPLEFT", frame.historyBox, "TOPRIGHT", 4, -16)
+  frame.historyScrollBar:SetPoint("BOTTOMLEFT", frame.historyBox, "BOTTOMRIGHT", 4, 16)
+  frame.historyScrollBar:SetMinMaxValues(0, 0)
+  frame.historyScrollBar:SetValueStep(1)
+  frame.historyScrollBar:SetObeyStepOnDrag(true)
+  frame.historyScrollBar:SetScript("OnValueChanged", function(self, value)
+    if self.updating then
+      return
+    end
+
+    local box = frame.historyBox
+    local current = box.GetCurrentScroll and box:GetCurrentScroll() or 0
+    local target = math.floor((value or 0) + 0.5)
+
+    while current < target do
+      box:ScrollUp()
+      current = current + 1
+    end
+
+    while current > target do
+      box:ScrollDown()
+      current = current - 1
+    end
+
+    updateHistoryScrollBar()
+  end)
+
+  frame.historyScrollBar.ScrollUpButton:SetScript("OnClick", function()
+    frame.historyBox:ScrollUp()
+    updateHistoryScrollBar()
+  end)
+  frame.historyScrollBar.ScrollDownButton:SetScript("OnClick", function()
+    frame.historyBox:ScrollDown()
+    updateHistoryScrollBar()
   end)
 
   frame.chatInput = CreateFrame("EditBox", nil, frame, "InputBoxTemplate")
@@ -609,6 +674,7 @@ function UI.RefreshHistory()
 
   C_Timer.After(0, scrollHistoryToBottom)
   C_Timer.After(0.05, scrollHistoryToBottom)
+  C_Timer.After(0.05, updateHistoryScrollBar)
   frame.status:SetText("")
 end
 
@@ -645,6 +711,7 @@ function UI.Refresh()
 
   frame.scrollFrame:SetShown(rosterSelected)
   frame.historyBox:SetShown(not rosterSelected)
+  frame.historyScrollBar:SetShown(not rosterSelected)
   frame.emptyState:SetShown(rosterSelected)
 
   if rosterSelected then
