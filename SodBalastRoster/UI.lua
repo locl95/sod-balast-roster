@@ -165,6 +165,14 @@ local function createRow(parent, index)
   row:EnableMouse(true)
   row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 
+  local function handleRightClick(anchor, button)
+    if button ~= "RightButton" or not row.member then
+      return
+    end
+
+    openNameMenu(anchor, row.member)
+  end
+
   row.highlight = row:CreateTexture(nil, "BACKGROUND")
   row.highlight:SetAllPoints(row)
   row.highlight:SetColorTexture(1, 1, 1, 0.08)
@@ -177,19 +185,11 @@ local function createRow(parent, index)
   row.name:SetPoint("LEFT", row.addon, "RIGHT", 4, 0)
 
   row.nameButton = CreateFrame("Button", nil, row)
-  row.nameButton:SetPoint("TOPLEFT", row.name, "TOPLEFT", 0, 0)
-  row.nameButton:SetPoint("BOTTOMRIGHT", row.name, "BOTTOMRIGHT", 0, 0)
+  row.nameButton:SetSize(150, ROW_HEIGHT)
+  row.nameButton:SetPoint("LEFT", row.addon, "RIGHT", 4, 0)
   row.nameButton:EnableMouse(true)
   row.nameButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-  row.nameButton:SetScript("OnClick", function(self, button)
-    if not row.member then
-      return
-    end
-
-    if button == "RightButton" then
-      openNameMenu(self, row.member)
-    end
-  end)
+  row.nameButton:SetScript("OnMouseUp", handleRightClick)
   row.nameButton:SetScript("OnEnter", function()
     row.highlight:Show()
   end)
@@ -220,15 +220,7 @@ local function createRow(parent, index)
     self.highlight:Hide()
   end)
 
-  row:SetScript("OnClick", function(self, button)
-    if not self.member then
-      return
-    end
-
-    if button == "RightButton" then
-      openNameMenu(self, self.member)
-    end
-  end)
+  row:SetScript("OnMouseUp", handleRightClick)
 
   return row
 end
