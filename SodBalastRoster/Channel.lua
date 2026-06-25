@@ -100,9 +100,6 @@ function Channel.ScanRoster()
         ns.Comm.QueueProfileRequest(member.name)
       end
 
-      if member and member.name ~= Utils.PlayerName() and Store.ShouldRequestWho(member, timestamp) then
-        ns.Who.QueueRequest(member.name)
-      end
     end
   end
 

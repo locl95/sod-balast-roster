@@ -71,12 +71,7 @@ local function openFallbackMenu(anchor, member)
     UI.dropdown = CreateFrame("Frame", "SodBalastRosterDropdown", UIParent, "UIDropDownMenuTemplate")
   end
 
-  UIDropDownMenu_Initialize(UI.dropdown, function(_, level)
-    for _, item in ipairs(menu) do
-      UIDropDownMenu_AddButton(item, level)
-    end
-  end, "MENU")
-  ToggleDropDownMenu(1, nil, UI.dropdown, anchor, 0, 0)
+  EasyMenu(menu, UI.dropdown, anchor, 0, 0, "MENU")
 end
 
 local function openNameMenu(anchor, member)
@@ -203,7 +198,7 @@ local function createRow(parent, index)
     self.highlight:Hide()
   end)
 
-  row:SetScript("OnMouseUp", function(self, button)
+  row:SetScript("OnClick", function(self, button)
     if not self.member then
       return
     end
@@ -314,7 +309,6 @@ function UI.Create()
   frame.refreshButton:SetScript("OnClick", function()
     ns.Channel.EnsureJoined()
     ns.Channel.ScanRoster()
-    ns.Who.RequestOneFromHardwareEvent()
     UI.Refresh()
   end)
 

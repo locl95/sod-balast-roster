@@ -4,8 +4,6 @@ local Utils = ns.Utils
 local Store = ns.Store
 local History = ns.History
 local Who = {
-  queue = {},
-  queued = {},
   activeName = nil,
   activeAt = 0,
   lastSendAt = 0,
@@ -51,86 +49,67 @@ local function getWhoInfo(index)
   return nil
 end
 
-function Who.QueueRequest(name)
-  name = Utils.NormalizeName(name)
-  if not name or name == Utils.PlayerName() or Who.queued[name] then
-    return
+local function applyWhoResult(targetName, guild, level, classFile, zone)
+  local _, changes = Store.SetWhoProfile(targetName, {
+    level = level,
+    classFile = classFile,
+    zone = zone,
+    guildName = guild,
+  }, Utils.Now())
+
+  if changes and changes.level then
+    History.Add("level_changed", targetName, string.format("%s -> %s", tostring(changes.level.old), tostring(changes.level.new)))
   end
-
-  Who.queued[name] = true
-  Who.queue[#Who.queue + 1] = name
-end
-
-function Who.FlushQueue(force)
-  if Who.activeName or #Who.queue == 0 then
-    return
+  if changes and changes.zone then
+    History.Add("zone_changed", targetName, string.format("%s -> %s", changes.zone.old or "", changes.zone.new or ""))
   end
-
-  local now = Utils.Now()
-  if not force and now - Who.lastSendAt < ns.Constants.whoRequestInterval then
-    return
-  end
-
-  local name = table.remove(Who.queue, 1)
-  Who.queued[name] = nil
-  Who.activeName = name
-  Who.activeAt = now
-  Who.lastSendAt = now
-  Store.MarkWhoRequested(name, now)
-  sendWho(string.format('n-"%s"', name))
-end
-
-function Who.QueueVisibleFallbacks()
-  local now = Utils.Now()
-  local visible = Store.GetVisibleRoster()
-
-  for _, member in ipairs(visible) do
-    if member.name ~= Utils.PlayerName() and Store.ShouldRequestWho(member, now) then
-      Who.QueueRequest(member.name)
-    end
+  if changes and changes.guildName then
+    History.Add("guild_changed", targetName, string.format("%s -> %s", changes.guildName.old or "", changes.guildName.new or ""))
   end
 end
 
 function Who.RequestOneFromHardwareEvent(name)
-  if name then
-    Who.QueueRequest(name)
-  else
-    Who.QueueVisibleFallbacks()
-  end
-
-  Who.FlushQueue(true)
-end
-
-function Who.HandleWhoListUpdate()
-  if not Who.activeName then
+  name = Utils.NormalizeName(name)
+  if not name or name == Utils.PlayerName() or Who.activeName then
     return
   end
 
-  local targetName = Who.activeName
+  local now = Utils.Now()
+  if now - Who.lastSendAt < ns.Constants.whoRequestInterval then
+    return
+  end
+
+  Who.activeName = name
+  Who.activeAt = now
+  Who.lastSendAt = now
+  Store.MarkWhoRequested(name, now)
+  ns.Utils.Print("who query: " .. tostring(name))
+  sendWho(string.format('n-"%s"', name))
+end
+
+function Who.HandleWhoListUpdate()
   local count = getWhoCount()
+  local targetName = Who.activeName
+  local applied = 0
 
   for index = 1, count do
     local name, guild, level, _, classFile, zone = getWhoInfo(index)
     name = Utils.NormalizeName(name)
-    if name == targetName then
-      local _, changes = Store.SetWhoProfile(targetName, {
-        level = level,
-        classFile = classFile,
-        zone = zone,
-        guildName = guild,
-      }, Utils.Now())
+    if name then
+      local member = Store.GetMember(name)
+      if member and member.name == name and member.isOnlineInChannel then
+        applyWhoResult(name, guild, level, classFile, zone)
+        applied = applied + 1
 
-      if changes and changes.level then
-        History.Add("level_changed", targetName, string.format("%s -> %s", tostring(changes.level.old), tostring(changes.level.new)))
+        if targetName and name == targetName then
+          ns.Utils.Print("who applied: " .. name)
+        end
       end
-      if changes and changes.zone then
-        History.Add("zone_changed", targetName, string.format("%s -> %s", changes.zone.old or "", changes.zone.new or ""))
-      end
-      if changes and changes.guildName then
-        History.Add("guild_changed", targetName, string.format("%s -> %s", changes.guildName.old or "", changes.guildName.new or ""))
-      end
-      break
     end
+  end
+
+  if targetName and applied == 0 then
+    ns.Utils.Print("who no match: " .. targetName)
   end
 
   Who.activeName = nil
