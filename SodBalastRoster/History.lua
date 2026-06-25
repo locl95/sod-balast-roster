@@ -28,3 +28,12 @@ function History.Add(eventType, name, details)
   History.Trim()
   return entry
 end
+
+function History.AddChannelMessage(sender, message)
+  message = Utils.Trim(message or "")
+  if message == "" then
+    return nil
+  end
+
+  return History.Add("channel_message", sender, message)
+end

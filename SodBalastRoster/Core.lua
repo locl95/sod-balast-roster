@@ -124,6 +124,15 @@ Core:SetScript("OnEvent", function(_, event, ...)
     return
   end
 
+  if event == "CHAT_MSG_CHANNEL" then
+    local message, sender, _, channelName, _, _, _, _, channelBaseName = ...
+    if ns.Utils.IsTargetChannel(channelName, channelBaseName) then
+      ns.History.AddChannelMessage(sender, message)
+      refreshUI()
+    end
+    return
+  end
+
   if event == "CHAT_MSG_ADDON" then
     ns.Comm.HandleAddonMessage(...)
     refreshUI()
@@ -151,4 +160,5 @@ Core:RegisterEvent("PLAYER_LOGIN")
 Core:RegisterEvent("PLAYER_ENTERING_WORLD")
 Core:RegisterEvent("CHANNEL_UI_UPDATE")
 Core:RegisterEvent("CHAT_MSG_CHANNEL_NOTICE")
+Core:RegisterEvent("CHAT_MSG_CHANNEL")
 Core:RegisterEvent("CHAT_MSG_ADDON")

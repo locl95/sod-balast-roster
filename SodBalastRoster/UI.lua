@@ -13,6 +13,7 @@ local ROW_HEIGHT = 18
 local VISIBLE_ROWS = 16
 
 local HISTORY_LABELS = {
+  channel_message = "message",
   joined_channel = "joined channel",
   left_channel = "left channel",
   profile_discovered = "profile discovered",
@@ -109,6 +110,10 @@ local function createTabButton(parent, text, x, tabName)
 end
 
 local function formatHistoryEntry(entry)
+  if entry.type == "channel_message" then
+    return string.format("[%s] <%s> %s", date("%H:%M:%S", entry.at), entry.name, entry.details or "")
+  end
+
   local label = HISTORY_LABELS[entry.type] or entry.type
   if entry.details and entry.details ~= "" then
     return string.format("[%s] %s: %s (%s)", date("%H:%M:%S", entry.at), entry.name, label, entry.details)

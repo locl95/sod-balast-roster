@@ -109,6 +109,22 @@ function Utils.PlayerName()
   return Utils.NormalizeName(UnitName("player"))
 end
 
+function Utils.IsTargetChannel(channelName, channelBaseName)
+  local target = string.lower(ns.Constants.channelName or "")
+  local base = string.lower(channelBaseName or "")
+  local full = string.lower(channelName or "")
+
+  if base == target then
+    return true
+  end
+
+  if full == target then
+    return true
+  end
+
+  return string.find(full, target, 1, true) ~= nil
+end
+
 function Utils.Print(message)
   local prefix = "|cff33ff99SodBalastRoster|r"
   if DEFAULT_CHAT_FRAME then
