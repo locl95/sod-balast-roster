@@ -25,6 +25,8 @@ local HISTORY_LABELS = {
 local CLASS_ICON_TEXTURE = "Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES"
 
 local function openFallbackMenu(anchor, member)
+  UI.activeMenuMember = member
+
   local menu = {
     {
       text = member.name,
@@ -69,7 +71,12 @@ local function openFallbackMenu(anchor, member)
     UI.dropdown = CreateFrame("Frame", "SodBalastRosterDropdown", UIParent, "UIDropDownMenuTemplate")
   end
 
-  EasyMenu(menu, UI.dropdown, anchor, 0, 0, "MENU")
+  UIDropDownMenu_Initialize(UI.dropdown, function(_, level)
+    for _, item in ipairs(menu) do
+      UIDropDownMenu_AddButton(item, level)
+    end
+  end, "MENU")
+  ToggleDropDownMenu(1, nil, UI.dropdown, anchor, 0, 0)
 end
 
 local function openNameMenu(anchor, member)
@@ -159,6 +166,7 @@ local function createRow(parent, index)
   local row = CreateFrame("Button", nil, parent)
   row:SetSize(820, ROW_HEIGHT)
   row:SetPoint("TOPLEFT", parent, "TOPLEFT", 8, -120 - ((index - 1) * ROW_HEIGHT))
+  row:EnableMouse(true)
   row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 
   row.highlight = row:CreateTexture(nil, "BACKGROUND")
@@ -195,7 +203,7 @@ local function createRow(parent, index)
     self.highlight:Hide()
   end)
 
-  row:SetScript("OnClick", function(self, button)
+  row:SetScript("OnMouseUp", function(self, button)
     if not self.member then
       return
     end
@@ -254,7 +262,7 @@ function UI.Create()
 
   frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
   frame.title:SetPoint("LEFT", frame.TitleBg, "LEFT", 8, 0)
-  frame.title:SetText("SodBalastRoster")
+  frame.title:SetText(string.format("SodBalastRoster v%s", ns.version or "dev"))
 
   frame.rosterTab = createTabButton(frame, "Roster", 12, TAB_ROSTER)
   frame.historyTab = createTabButton(frame, "Chat", 110, TAB_HISTORY)
