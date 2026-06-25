@@ -217,6 +217,16 @@ function UI.Create()
   frame.searchBox:SetPoint("LEFT", frame.onlyAddon.label, "RIGHT", 30, 0)
   frame.searchBox:SetAutoFocus(false)
   frame.searchBox:SetTextInsets(6, 6, 0, 0)
+  frame.searchBox:SetScript("OnTextChanged", function(self, userInput)
+    if not userInput then
+      return
+    end
+
+    Store.SetUIFlag("search", self:GetText() or "")
+    if Store.GetUIState().selectedTab ~= TAB_HISTORY then
+      UI.RefreshRoster()
+    end
+  end)
   frame.searchBox:SetScript("OnEnterPressed", function(self)
     Store.SetUIFlag("search", self:GetText() or "")
     self:ClearFocus()
@@ -399,7 +409,9 @@ function UI.Refresh()
 
   frame.onlyOnline:SetChecked(uiState.onlyOnline)
   frame.onlyAddon:SetChecked(uiState.onlyAddon)
-  frame.searchBox:SetText(uiState.search or "")
+  if not frame.searchBox:HasFocus() and frame.searchBox:GetText() ~= (uiState.search or "") then
+    frame.searchBox:SetText(uiState.search or "")
+  end
 
   local rosterSelected = uiState.selectedTab ~= TAB_HISTORY
   frame.onlyOnline:SetShown(rosterSelected)
