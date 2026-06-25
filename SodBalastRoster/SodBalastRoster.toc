@@ -1,0 +1,14 @@
+## Interface: 11508
+## Title: SodBalastRoster
+## Notes: Channel-based social roster for SODBALAST
+## Author: OpenCode
+## Version: 0.1.0
+## SavedVariables: SodBalastRosterDB
+
+Utils.lua
+Store.lua
+History.lua
+Channel.lua
+Comm.lua
+UI.lua
+Core.lua
