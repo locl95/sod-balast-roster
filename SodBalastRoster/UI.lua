@@ -363,6 +363,23 @@ local function scrollHistoryToBottom()
   end
 end
 
+local function restoreHistoryScroll(position)
+  if not UI.frame or not UI.frame.historyBox or not position or position <= 0 then
+    return
+  end
+
+  local box = UI.frame.historyBox
+  if box.ScrollToTop then
+    box:ScrollToTop()
+  end
+
+  for _ = 1, position do
+    if box.ScrollUp then
+      box:ScrollUp()
+    end
+  end
+end
+
 function UI.Create()
   if UI.frame then
     return UI.frame
@@ -594,6 +611,7 @@ function UI.RefreshHistory()
   local frame = UI.Create()
   local lines = {}
   local entries = ns.History.GetEntries()
+  local previousScroll = frame.historyBox.GetCurrentScroll and frame.historyBox:GetCurrentScroll() or 0
   for index = 1, #entries do
     local entry = entries[index]
     if entry.type == "channel_message" then
@@ -612,6 +630,10 @@ function UI.RefreshHistory()
     frame.historyShouldScrollToBottom = false
     C_Timer.After(0, scrollHistoryToBottom)
     C_Timer.After(0.05, scrollHistoryToBottom)
+  else
+    C_Timer.After(0, function()
+      restoreHistoryScroll(previousScroll)
+    end)
   end
   frame.status:SetText("")
 end
