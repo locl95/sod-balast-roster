@@ -51,7 +51,7 @@ end
 local function createRow(parent, index)
   local row = CreateFrame("Button", nil, parent)
   row:SetSize(820, ROW_HEIGHT)
-  row:SetPoint("TOPLEFT", parent, "TOPLEFT", 8, -96 - ((index - 1) * ROW_HEIGHT))
+  row:SetPoint("TOPLEFT", parent, "TOPLEFT", 8, -120 - ((index - 1) * ROW_HEIGHT))
   row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 
   row.online = createLabel(row, 28, "CENTER")
@@ -100,7 +100,7 @@ end
 local function createTabButton(parent, text, x, tabName)
   local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
   button:SetSize(90, 20)
-  button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, -8)
+  button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, -32)
   button:SetText(text)
   button:SetScript("OnClick", function()
     Store.SetUIFlag("selectedTab", tabName)
@@ -145,11 +145,11 @@ function UI.Create()
   frame.title:SetPoint("LEFT", frame.TitleBg, "LEFT", 8, 0)
   frame.title:SetText("SodBalastRoster")
 
-  frame.rosterTab = createTabButton(frame, "Roster", 12, TAB_ROSTER)
-  frame.historyTab = createTabButton(frame, "History", 110, TAB_HISTORY)
+  frame.rosterTab = createTabButton(frame, "Roster", 180, TAB_ROSTER)
+  frame.historyTab = createTabButton(frame, "History", 278, TAB_HISTORY)
 
   frame.onlyOnline = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
-  frame.onlyOnline:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -36)
+  frame.onlyOnline:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -60)
   frame.onlyOnline.label = createCheckLabel(frame.onlyOnline, "Only online")
   frame.onlyOnline:SetScript("OnClick", function(self)
     Store.SetUIFlag("onlyOnline", self:GetChecked() and true or false)
@@ -199,11 +199,11 @@ function UI.Create()
   end)
 
   frame.status = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  frame.status:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -40)
+  frame.status:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -64)
   frame.status:SetText("")
 
   frame.emptyState = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  frame.emptyState:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -116)
+  frame.emptyState:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -140)
   frame.emptyState:SetPoint("RIGHT", frame, "RIGHT", -40, 0)
   frame.emptyState:SetJustifyH("LEFT")
   frame.emptyState:SetJustifyV("TOP")
@@ -223,7 +223,7 @@ function UI.Create()
 
   for _, header in ipairs(headers) do
     local label = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    label:SetPoint("TOPLEFT", frame, "TOPLEFT", header.x, -76)
+    label:SetPoint("TOPLEFT", frame, "TOPLEFT", header.x, -100)
     label:SetWidth(header.width)
     label:SetJustifyH("LEFT")
     label:SetText(header.text)
@@ -231,7 +231,7 @@ function UI.Create()
   end
 
   frame.historyHeader = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  frame.historyHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -76)
+  frame.historyHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -96)
   frame.historyHeader:SetText("Channel History")
 
   for index = 1, VISIBLE_ROWS do
@@ -239,14 +239,14 @@ function UI.Create()
   end
 
   frame.scrollFrame = CreateFrame("ScrollFrame", "SodBalastRosterScrollFrame", frame, "FauxScrollFrameTemplate")
-  frame.scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -92)
+  frame.scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -116)
   frame.scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 36)
   frame.scrollFrame:SetScript("OnVerticalScroll", function(self, offset)
     FauxScrollFrame_OnVerticalScroll(self, offset, ROW_HEIGHT, UI.RefreshRoster)
   end)
 
   frame.historyBox = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
-  frame.historyBox:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -72)
+  frame.historyBox:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -120)
   frame.historyBox:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -28, 40)
 
   frame.historyText = CreateFrame("EditBox", nil, frame.historyBox)
@@ -337,7 +337,7 @@ function UI.RefreshHistory()
   local lines = {}
   local entries = ns.History.GetEntries()
 
-  for index = #entries, 1, -1 do
+  for index = 1, #entries do
     local entry = entries[index]
     lines[#lines + 1] = formatHistoryEntry(entry)
   end
