@@ -711,9 +711,24 @@ function UI.Create()
   frame.historyBox:SetFading(false)
   frame.historyBox:SetIndentedWordWrap(false)
   frame.historyBox:SetMaxLines(1000)
+  if frame.historyBox.SetHyperlinksEnabled then
+    frame.historyBox:SetHyperlinksEnabled(true)
+  end
   frame.historyScrollPosition = 0
   frame.historyScrollMax = 0
   frame.historyBox:EnableMouseWheel(true)
+  frame.historyBox:SetScript("OnHyperlinkClick", function(_, link, text, button)
+    SetItemRef(link, text, button, ChatFrame1)
+  end)
+  frame.historyBox:SetScript("OnHyperlinkEnter", function(self, link, text)
+    GameTooltip:SetOwner(self, "ANCHOR_CURSOR")
+    GameTooltip:SetHyperlink(link)
+    GameTooltip:Show()
+  end)
+  frame.historyBox:SetScript("OnHyperlinkLeave", function()
+    GameTooltip:Hide()
+    ResetCursor()
+  end)
   frame.historyBox:SetScript("OnMouseWheel", function(self, delta)
     if delta > 0 then
       self:ScrollUp()
