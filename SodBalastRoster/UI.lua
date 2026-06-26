@@ -362,6 +362,8 @@ local function scrollHistoryToBottom()
     UI.frame.historyBox:ScrollToBottom()
   end
 
+  UI.frame.historyScrollPosition = 0
+
   if UI.UpdateHistoryIndicator then
     UI.UpdateHistoryIndicator()
   end
@@ -383,6 +385,8 @@ local function restoreHistoryScroll(position)
     end
   end
 
+  UI.frame.historyScrollPosition = position
+
   if UI.UpdateHistoryIndicator then
     UI.UpdateHistoryIndicator()
   end
@@ -397,8 +401,9 @@ function UI.UpdateHistoryIndicator()
   local indicator = UI.frame.historyIndicator
   local thumb = indicator.thumb
   local total = box.GetNumMessages and box:GetNumMessages() or 0
-  local current = box.GetCurrentScroll and box:GetCurrentScroll() or 0
-  local maxValue = math.max(0, total - 1)
+  local visibleLines = math.max(1, math.floor((box:GetHeight() or 1) / 14))
+  local maxValue = math.max(0, total - visibleLines)
+  local current = math.min(UI.frame.historyScrollPosition or 0, maxValue)
 
   if maxValue <= 0 then
     indicator:Hide()
@@ -554,12 +559,15 @@ function UI.Create()
   frame.historyBox:SetFading(false)
   frame.historyBox:SetIndentedWordWrap(false)
   frame.historyBox:SetMaxLines(1000)
+  frame.historyScrollPosition = 0
   frame.historyBox:EnableMouseWheel(true)
   frame.historyBox:SetScript("OnMouseWheel", function(self, delta)
     if delta > 0 then
       self:ScrollUp()
+      frame.historyScrollPosition = (frame.historyScrollPosition or 0) + 1
     else
       self:ScrollDown()
+      frame.historyScrollPosition = math.max(0, (frame.historyScrollPosition or 0) - 1)
     end
 
     UI.UpdateHistoryIndicator()
@@ -666,7 +674,7 @@ function UI.RefreshHistory()
   local frame = UI.Create()
   local lines = {}
   local entries = ns.History.GetEntries()
-  local previousScroll = frame.historyBox.GetCurrentScroll and frame.historyBox:GetCurrentScroll() or 0
+  local previousScroll = frame.historyScrollPosition or 0
   local lastMessageId = nil
 
   for index = 1, #entries do
