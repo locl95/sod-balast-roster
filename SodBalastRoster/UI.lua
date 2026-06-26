@@ -11,6 +11,12 @@ local TAB_ROSTER = "roster"
 local TAB_HISTORY = "history"
 local ROW_HEIGHT = 18
 local VISIBLE_ROWS = 16
+local TAB_ICON_SIZE = 28
+
+local TAB_TEXTURES = {
+  [TAB_ROSTER] = "Interface\\Icons\\INV_Misc_GroupLooking",
+  [TAB_HISTORY] = "Interface\\Icons\\INV_Misc_Note_01",
+}
 
 local HISTORY_LABELS = {
   channel_message = "message",
@@ -310,15 +316,49 @@ local function createRow(parent, index)
   return row
 end
 
-local function createTabButton(parent, text, x, tabName)
-  local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-  button:SetSize(90, 20)
-  button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, -32)
-  button:SetText(text)
+local function updateTabButtonState(button, selected)
+  if selected then
+    button:SetBackdropColor(0.24, 0.32, 0.44, 0.95)
+    button:SetBackdropBorderColor(0.85, 0.82, 0.58, 1)
+    button.icon:SetAlpha(1)
+  else
+    button:SetBackdropColor(0.08, 0.08, 0.08, 0.9)
+    button:SetBackdropBorderColor(0.28, 0.28, 0.28, 1)
+    button.icon:SetAlpha(0.75)
+  end
+end
+
+local function createTabButton(parent, x, y, tabName, tooltipText)
+  local button = CreateFrame("Button", nil, parent, BackdropTemplateMixin and "BackdropTemplate")
+  button:SetSize(TAB_ICON_SIZE, TAB_ICON_SIZE)
+  button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+  button:SetBackdrop({
+    bgFile = "Interface/Buttons/WHITE8X8",
+    edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+    tile = true,
+    tileSize = 8,
+    edgeSize = 10,
+    insets = { left = 2, right = 2, top = 2, bottom = 2 },
+  })
+
+  button.icon = button:CreateTexture(nil, "ARTWORK")
+  button.icon:SetPoint("TOPLEFT", button, "TOPLEFT", 4, -4)
+  button.icon:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -4, 4)
+  button.icon:SetTexture(TAB_TEXTURES[tabName])
+
   button:SetScript("OnClick", function()
     Store.SetUIFlag("selectedTab", tabName)
     UI.Refresh()
   end)
+  button:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText(tooltipText)
+    GameTooltip:Show()
+  end)
+  button:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+  end)
+
   return button
 end
 
@@ -461,8 +501,8 @@ function UI.Create()
   frame.title:SetPoint("LEFT", frame.TitleBg, "LEFT", 8, 0)
   frame.title:SetText(string.format("SodBalastRoster v%s", ns.version or "dev"))
 
-  frame.rosterTab = createTabButton(frame, "Roster", 12, TAB_ROSTER)
-  frame.historyTab = createTabButton(frame, "Chat", 110, TAB_HISTORY)
+  frame.rosterTab = createTabButton(frame, 12, -58, TAB_ROSTER, "Roster")
+  frame.historyTab = createTabButton(frame, 12, -92, TAB_HISTORY, "Chat")
 
   frame.onlyOnline = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
   frame.onlyOnline:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -60)
@@ -787,6 +827,8 @@ function UI.Refresh()
   end
 
   local rosterSelected = uiState.selectedTab ~= TAB_HISTORY
+  updateTabButtonState(frame.rosterTab, rosterSelected)
+  updateTabButtonState(frame.historyTab, not rosterSelected)
   frame.onlyOnline:SetShown(rosterSelected)
   frame.onlyOnline.label:SetShown(rosterSelected)
   frame.onlyAddon:SetShown(rosterSelected)
