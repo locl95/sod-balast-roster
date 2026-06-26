@@ -69,6 +69,8 @@ function Channel.ScanRoster()
   Channel.lastMemberCount = memberCount or 0
   Channel.lastFallbackPlayer = nil
 
+  Store.MarkSelfInChannel(timestamp)
+
   Channel.lastResolvedNames = {}
   Channel.lastResolvedCount = 0
   Channel.lastScanReason = memberCount and memberCount > 0 and "roster_best_effort_disabled" or nil

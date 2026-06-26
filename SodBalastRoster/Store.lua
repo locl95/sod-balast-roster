@@ -235,6 +235,24 @@ function Store.MarkObservedByWho(name, timestamp)
   return member, not wasOnline
 end
 
+function Store.MarkSelfInChannel(timestamp)
+  local name = Utils.PlayerName()
+  if not name then
+    return nil
+  end
+
+  local member = Store.GetMember(name)
+  if not member then
+    return nil
+  end
+
+  markObserved(member, timestamp, "notice")
+  member.hasAddon = true
+  member.lastAddonSeenAt = math.max(member.lastAddonSeenAt or 0, timestamp)
+  member.pendingAddonProbe = false
+  return member
+end
+
 function Store.ConfirmPendingJoins(activeNames, threshold)
   threshold = threshold or 2
   local changed = {}
