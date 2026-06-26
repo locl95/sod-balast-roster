@@ -99,22 +99,11 @@ function Who.HandleWhoListUpdate()
   local targetName = Who.activeName
   local applied = 0
   local firstMatch = nil
-  local firstResult = nil
 
   for index = 1, count do
     local name, guild, level, _, classFile, zone = getWhoInfo(index)
     name = Utils.NormalizeName(name)
     if name then
-      if not firstResult then
-        firstResult = {
-          name = name,
-          guild = guild,
-          level = level,
-          classFile = classFile,
-          zone = zone,
-        }
-      end
-
       if targetName and name == targetName then
         firstMatch = {
           name = name,
@@ -140,10 +129,6 @@ function Who.HandleWhoListUpdate()
   if targetName and applied == 0 and firstMatch then
     applyWhoResult(targetName, firstMatch.guild, firstMatch.level, firstMatch.classFile, firstMatch.zone)
     ns.Utils.Print("who applied target: " .. targetName)
-    applied = applied + 1
-  elseif targetName and applied == 0 and count == 1 and firstResult then
-    applyWhoResult(targetName, firstResult.guild, firstResult.level, firstResult.classFile, firstResult.zone)
-    ns.Utils.Print("who applied single result: " .. targetName)
     applied = applied + 1
   end
 
