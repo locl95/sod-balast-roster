@@ -822,13 +822,23 @@ function UI.Create()
   frame.chatInput:SetAutoFocus(false)
   frame.chatInput:SetTextInsets(6, 6, 0, 0)
   frame.chatInput:SetScript("OnEditFocusGained", function(self)
-    self:SetPropagateKeyboardInput(true)
+    if self.SetPropagateKeyboardInput then
+      self:SetPropagateKeyboardInput(false)
+    end
+  end)
+  frame.chatInput:SetScript("OnEditFocusLost", function(self)
+    if self.SetPropagateKeyboardInput then
+      self:SetPropagateKeyboardInput(true)
+    end
   end)
   frame.chatInput:SetScript("OnEnterPressed", function(self)
     sendChatMessageFromInput()
     self:ClearFocus()
   end)
   frame.chatInput:SetScript("OnEscapePressed", function(self)
+    if self.SetPropagateKeyboardInput then
+      self:SetPropagateKeyboardInput(false)
+    end
     self:ClearFocus()
   end)
 
