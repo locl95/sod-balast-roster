@@ -11,11 +11,11 @@ local TAB_ROSTER = "roster"
 local TAB_HISTORY = "history"
 local ROW_HEIGHT = 18
 local VISIBLE_ROWS = 16
-local TAB_ICON_SIZE = 28
+local TAB_ICON_SIZE = 40
 
 local TAB_TEXTURES = {
-  [TAB_ROSTER] = "Interface\\Icons\\INV_Misc_GroupLooking",
-  [TAB_HISTORY] = "Interface\\Icons\\INV_Misc_Note_01",
+  [TAB_ROSTER] = "Interface\\Icons\\Achievement_GuildPerk_EverybodysFriend",
+  [TAB_HISTORY] = "Interface\\ChatFrame\\UI-ChatIcon-Chat-Up",
 }
 
 local HISTORY_LABELS = {
@@ -331,7 +331,7 @@ end
 local function createTabButton(parent, x, y, tabName, tooltipText)
   local button = CreateFrame("Button", nil, parent, BackdropTemplateMixin and "BackdropTemplate")
   button:SetSize(TAB_ICON_SIZE, TAB_ICON_SIZE)
-  button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+  button:SetPoint("TOPLEFT", parent, "TOPRIGHT", x, y)
   button:SetBackdrop({
     bgFile = "Interface/Buttons/WHITE8X8",
     edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
@@ -342,9 +342,14 @@ local function createTabButton(parent, x, y, tabName, tooltipText)
   })
 
   button.icon = button:CreateTexture(nil, "ARTWORK")
-  button.icon:SetPoint("TOPLEFT", button, "TOPLEFT", 4, -4)
-  button.icon:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -4, 4)
+  button.icon:SetPoint("TOPLEFT", button, "TOPLEFT", 6, -6)
+  button.icon:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -6, 6)
   button.icon:SetTexture(TAB_TEXTURES[tabName])
+  if tabName == TAB_HISTORY then
+    button.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+  else
+    button.icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
+  end
 
   button:SetScript("OnClick", function()
     Store.SetUIFlag("selectedTab", tabName)
@@ -501,8 +506,8 @@ function UI.Create()
   frame.title:SetPoint("LEFT", frame.TitleBg, "LEFT", 8, 0)
   frame.title:SetText(string.format("SodBalastRoster v%s", ns.version or "dev"))
 
-  frame.rosterTab = createTabButton(frame, 12, -58, TAB_ROSTER, "Roster")
-  frame.historyTab = createTabButton(frame, 12, -92, TAB_HISTORY, "Chat")
+  frame.rosterTab = createTabButton(frame, 8, -56, TAB_ROSTER, "Roster")
+  frame.historyTab = createTabButton(frame, 8, -102, TAB_HISTORY, "Chat")
 
   frame.onlyOnline = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
   frame.onlyOnline:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -60)
