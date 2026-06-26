@@ -32,6 +32,19 @@ local function registerSpecialFrame(frameName)
   table.insert(UISpecialFrames, frameName)
 end
 
+local function unregisterSpecialFrame(frameName)
+  if not frameName or not UISpecialFrames then
+    return
+  end
+
+  for index, existing in ipairs(UISpecialFrames) do
+    if existing == frameName then
+      table.remove(UISpecialFrames, index)
+      return
+    end
+  end
+end
+
 local function isDescendantFrame(frame, ancestor)
   while frame do
     if frame == ancestor then
@@ -825,11 +838,13 @@ function UI.Create()
     if self.SetPropagateKeyboardInput then
       self:SetPropagateKeyboardInput(false)
     end
+    unregisterSpecialFrame("SodBalastRosterFrame")
   end)
   frame.chatInput:SetScript("OnEditFocusLost", function(self)
     if self.SetPropagateKeyboardInput then
       self:SetPropagateKeyboardInput(true)
     end
+    registerSpecialFrame("SodBalastRosterFrame")
   end)
   frame.chatInput:SetScript("OnEnterPressed", function(self)
     sendChatMessageFromInput()
