@@ -363,6 +363,7 @@ local function scrollHistoryToBottom()
   end
 
   UI.frame.historyScrollPosition = 0
+  UI.frame.historyScrollMax = math.max(UI.frame.historyScrollMax or 0, 0)
 
   if UI.UpdateHistoryIndicator then
     UI.UpdateHistoryIndicator()
@@ -397,6 +398,7 @@ local function restoreHistoryScroll(position)
   end
 
   UI.frame.historyScrollPosition = position
+  UI.frame.historyScrollMax = math.max(UI.frame.historyScrollMax or 0, position)
 
   if UI.UpdateHistoryIndicator then
     UI.UpdateHistoryIndicator()
@@ -412,7 +414,8 @@ function UI.UpdateHistoryIndicator()
   local bar = UI.frame.historyScrollBar
   local total = box.GetNumMessages and box:GetNumMessages() or 0
   local visibleLines = math.max(1, math.floor((box:GetHeight() or 1) / 14))
-  local maxValue = math.max(0, total - visibleLines)
+  local estimatedMax = math.max(0, total - visibleLines)
+  local maxValue = math.max(estimatedMax, UI.frame.historyScrollMax or 0)
   local current = math.min(UI.frame.historyScrollPosition or 0, maxValue)
 
   if maxValue <= 0 then
@@ -425,6 +428,7 @@ function UI.UpdateHistoryIndicator()
   bar.updating = true
   bar:SetValue(maxValue - current)
   bar.updating = false
+  bar.lastValue = maxValue - current
 
   if bar.ScrollUpButton then
     bar.ScrollUpButton:SetEnabled(current < maxValue)
@@ -572,11 +576,17 @@ function UI.Create()
   frame.historyBox:SetIndentedWordWrap(false)
   frame.historyBox:SetMaxLines(1000)
   frame.historyScrollPosition = 0
+  frame.historyScrollMax = 0
   frame.historyBox:EnableMouseWheel(true)
   frame.historyBox:SetScript("OnMouseWheel", function(self, delta)
     if delta > 0 then
       self:ScrollUp()
       frame.historyScrollPosition = (frame.historyScrollPosition or 0) + 1
+      if self.AtTop and self:AtTop() then
+        frame.historyScrollMax = frame.historyScrollPosition
+      else
+        frame.historyScrollMax = math.max(frame.historyScrollMax or 0, frame.historyScrollPosition)
+      end
     else
       self:ScrollDown()
       frame.historyScrollPosition = math.max(0, (frame.historyScrollPosition or 0) - 1)
@@ -597,10 +607,18 @@ function UI.Create()
       return
     end
 
+    self.updating = true
+    self:SetValue(self.lastValue or value or 0)
+    self.updating = false
+
+    if not self.buttonScrolling then
+      return
+    end
+
     local box = frame.historyBox
     local total = box.GetNumMessages and box:GetNumMessages() or 0
     local visibleLines = math.max(1, math.floor((box:GetHeight() or 1) / 14))
-    local maxValue = math.max(0, total - visibleLines)
+    local maxValue = math.max(math.max(0, total - visibleLines), frame.historyScrollMax or 0)
     local targetPosition = math.max(0, math.min(maxValue, maxValue - math.floor((value or 0) + 0.5)))
 
     restoreHistoryScroll(targetPosition)
@@ -608,16 +626,25 @@ function UI.Create()
 
   frame.historyScrollBar.ScrollUpButton:SetScript("OnClick", function()
     local box = frame.historyBox
+    frame.historyScrollBar.buttonScrolling = true
     box:ScrollUp()
     frame.historyScrollPosition = (frame.historyScrollPosition or 0) + 1
+    if box.AtTop and box:AtTop() then
+      frame.historyScrollMax = frame.historyScrollPosition
+    else
+      frame.historyScrollMax = math.max(frame.historyScrollMax or 0, frame.historyScrollPosition)
+    end
     UI.UpdateHistoryIndicator()
+    frame.historyScrollBar.buttonScrolling = false
   end)
   frame.historyScrollBar.ScrollUpButton:EnableMouse(true)
   frame.historyScrollBar.ScrollDownButton:SetScript("OnClick", function()
     local box = frame.historyBox
+    frame.historyScrollBar.buttonScrolling = true
     box:ScrollDown()
     frame.historyScrollPosition = math.max(0, (frame.historyScrollPosition or 0) - 1)
     UI.UpdateHistoryIndicator()
+    frame.historyScrollBar.buttonScrolling = false
   end)
   frame.historyScrollBar.ScrollDownButton:EnableMouse(true)
 
