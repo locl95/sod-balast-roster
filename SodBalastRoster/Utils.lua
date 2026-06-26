@@ -23,6 +23,40 @@ ns.Constants = {
 local Utils = {}
 ns.Utils = Utils
 
+local professionIconNameMap
+
+local function buildProfessionIconNameMap()
+  if professionIconNameMap then
+    return professionIconNameMap
+  end
+
+  professionIconNameMap = {}
+
+  local spellIds = {
+    2259, -- Alchemy
+    2018, -- Blacksmithing
+    7411, -- Enchanting
+    4036, -- Engineering
+    2108, -- Leatherworking
+    3908, -- Tailoring
+    2550, -- Cooking
+    3273, -- First Aid
+    7620, -- Fishing
+    2366, -- Herbalism
+    2575, -- Mining
+    8613, -- Skinning
+  }
+
+  for _, spellId in ipairs(spellIds) do
+    local name, _, texture = GetSpellInfo(spellId)
+    if name and texture then
+      professionIconNameMap[name] = texture
+    end
+  end
+
+  return professionIconNameMap
+end
+
 function Utils.Now()
   return time()
 end
@@ -67,7 +101,12 @@ function Utils.ResolveProfessionIcon(name, icon)
   end
 
   local _, _, texture = GetSpellInfo(name)
-  return texture or ""
+  if texture then
+    return texture
+  end
+
+  local nameMap = buildProfessionIconNameMap()
+  return nameMap[name] or ""
 end
 
 function Utils.IsSupportedProtocolVersion(version)
