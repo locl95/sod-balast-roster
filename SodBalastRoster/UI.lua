@@ -32,6 +32,17 @@ local function registerSpecialFrame(frameName)
   table.insert(UISpecialFrames, frameName)
 end
 
+local function isDescendantFrame(frame, ancestor)
+  while frame do
+    if frame == ancestor then
+      return true
+    end
+    frame = frame:GetParent()
+  end
+
+  return false
+end
+
 local HISTORY_LABELS = {
   channel_message = "message",
   joined_channel = "joined channel",
@@ -78,8 +89,8 @@ local function ensureContextMenu()
   menu:SetToplevel(true)
   menu:SetClampedToScreen(true)
   menu:EnableMouse(true)
+  menu:EnableKeyboard(true)
   menu:SetSize(170, 132)
-  registerSpecialFrame("SodBalastRosterContextMenu")
 
   if menu.SetBackdrop then
     menu:SetBackdrop({
@@ -124,6 +135,34 @@ local function ensureContextMenu()
       menu:Hide()
     end
   end)
+  menu:SetScript("OnKeyDown", function(self, key)
+    if key == "ESCAPE" then
+      self:Hide()
+    end
+  end)
+  menu:SetScript("OnShow", function(self)
+    self:SetPropagateKeyboardInput(false)
+  end)
+
+  if not UI.contextMenuDismissHooked then
+    UIParent:HookScript("OnMouseDown", function(_, button)
+      if button ~= "LeftButton" and button ~= "RightButton" then
+        return
+      end
+
+      if not UI.contextMenu or not UI.contextMenu:IsShown() then
+        return
+      end
+
+      local focus = GetMouseFocus and GetMouseFocus() or nil
+      if isDescendantFrame(focus, UI.contextMenu) then
+        return
+      end
+
+      UI.contextMenu:Hide()
+    end)
+    UI.contextMenuDismissHooked = true
+  end
 
   UI.contextMenu = menu
   return menu
