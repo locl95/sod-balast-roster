@@ -41,11 +41,14 @@ function Store.Init()
 end
 
 function Store.GetDB()
+  if not ns.db then
+    Store.Init()
+  end
   return ns.db
 end
 
 function Store.GetRoster()
-  return ns.db.roster
+  return Store.GetDB().roster
 end
 
 function Store.ResetTransientState()
@@ -404,7 +407,7 @@ function Store.MarkHistoryAdvertised(name, timestamp)
 end
 
 function Store.GetUIState()
-  return ns.db.ui
+  return Store.GetDB().ui
 end
 
 function Store.GetLatestRosterUpdatedAt()
