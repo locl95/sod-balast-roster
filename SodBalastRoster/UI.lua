@@ -11,7 +11,7 @@ local TAB_ROSTER = "roster"
 local TAB_HISTORY = "history"
 local ROW_HEIGHT = 18
 local VISIBLE_ROWS = 16
-local TAB_ICON_SIZE = 40
+local TAB_ICON_SIZE = 48
 
 local TAB_TEXTURES = {
   [TAB_ROSTER] = "Interface\\Icons\\Achievement_GuildPerk_EverybodysFriend",
@@ -506,8 +506,8 @@ function UI.Create()
   frame.title:SetPoint("LEFT", frame.TitleBg, "LEFT", 8, 0)
   frame.title:SetText(string.format("SodBalastRoster v%s", ns.version or "dev"))
 
-  frame.rosterTab = createTabButton(frame, 8, -56, TAB_ROSTER, "Roster")
-  frame.historyTab = createTabButton(frame, 8, -102, TAB_HISTORY, "Chat")
+  frame.rosterTab = createTabButton(frame, 0, -56, TAB_ROSTER, "Roster")
+  frame.historyTab = createTabButton(frame, 0, -56 - TAB_ICON_SIZE, TAB_HISTORY, "Chat")
 
   frame.onlyOnline = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
   frame.onlyOnline:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -60)
