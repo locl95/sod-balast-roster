@@ -143,6 +143,26 @@ function Store.MarkSeenInChannel(name, timestamp)
   return member, not wasOnline
 end
 
+function Store.MarkObservedInChannel(name, timestamp)
+  local member = Store.GetMember(name)
+  if not member then
+    return nil, false
+  end
+
+  local wasOnline = member.isOnlineInChannel
+  if member.firstSeenAt == 0 then
+    member.firstSeenAt = timestamp
+  end
+
+  member.isOnlineInChannel = true
+  member.lastSeenAt = timestamp
+  member.missingScans = 0
+  member.pendingJoin = false
+  member.joinSeenScans = 0
+
+  return member, not wasOnline
+end
+
 function Store.ConfirmPendingJoins(activeNames, threshold)
   threshold = threshold or 2
   local changed = {}

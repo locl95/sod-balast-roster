@@ -216,6 +216,29 @@ Core:SetScript("OnEvent", function(_, event, ...)
   end
 
   if event == "CHANNEL_UI_UPDATE" or event == "CHAT_MSG_CHANNEL_NOTICE" then
+    if event == "CHAT_MSG_CHANNEL_NOTICE" then
+      local text, playerName, _, channelName, playerName2, _, _, _, channelBaseName = ...
+      if ns.Utils.IsTargetChannel(channelName, channelBaseName) and ns.Utils.IsJoinOrLeaveNotice(text) then
+        local targetName = ns.Utils.NormalizeName(playerName2)
+        local sourceName = ns.Utils.NormalizeName(playerName)
+        local name = targetName or sourceName
+
+        if name and name ~= ns.Utils.PlayerName() then
+          if text == "JOINED" or text == "YOU_JOINED" or text == "YOU_CHANGED" then
+            local _, justJoined = ns.Store.MarkObservedInChannel(name, ns.Utils.Now())
+            if justJoined then
+              ns.History.Add("joined_channel", name)
+            end
+          elseif text == "LEFT" or text == "YOU_LEFT" then
+            local _, changed = ns.Store.MarkOffline(name)
+            if changed then
+              ns.History.Add("left_channel", name)
+            end
+          end
+        end
+      end
+    end
+
     runScanAndRefresh()
     scheduleRescanBurst()
     return
@@ -224,6 +247,10 @@ Core:SetScript("OnEvent", function(_, event, ...)
   if event == "CHAT_MSG_CHANNEL" then
     local message, sender, _, channelName, _, _, _, _, channelBaseName, _, lineId = ...
     if ns.Utils.IsTargetChannel(channelName, channelBaseName) then
+      local _, justJoined = ns.Store.MarkObservedInChannel(sender, ns.Utils.Now())
+      if justJoined and ns.Utils.NormalizeName(sender) ~= ns.Utils.PlayerName() then
+        ns.History.Add("joined_channel", sender)
+      end
       ns.History.AddChannelMessage(sender, message, lineId)
       refreshUI()
     end
