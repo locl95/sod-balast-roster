@@ -468,6 +468,23 @@ local function sendChatMessageFromInput()
   frame.historyShouldScrollToBottom = true
 end
 
+local function insertLinkIntoChatInput(link)
+  local frame = UI.frame
+  if not frame or not frame.chatInput or not frame.chatInput:HasFocus() then
+    return false
+  end
+
+  local editBox = frame.chatInput
+  local currentText = editBox:GetText() or ""
+  local cursorPosition = editBox:GetCursorPosition() or #currentText
+  local left = string.sub(currentText, 1, cursorPosition)
+  local right = string.sub(currentText, cursorPosition + 1)
+
+  editBox:SetText(left .. link .. right)
+  editBox:SetCursorPosition(cursorPosition + string.len(link))
+  return true
+end
+
 local function scrollHistoryToBottom()
   if not UI.frame or not UI.frame.historyBox then
     return
@@ -804,6 +821,9 @@ function UI.Create()
   frame.chatInput:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 16, 34)
   frame.chatInput:SetAutoFocus(false)
   frame.chatInput:SetTextInsets(6, 6, 0, 0)
+  frame.chatInput:SetScript("OnEditFocusGained", function(self)
+    self:SetPropagateKeyboardInput(true)
+  end)
   frame.chatInput:SetScript("OnEnterPressed", function(self)
     sendChatMessageFromInput()
     self:ClearFocus()
@@ -811,6 +831,13 @@ function UI.Create()
   frame.chatInput:SetScript("OnEscapePressed", function(self)
     self:ClearFocus()
   end)
+
+  if not UI.insertLinkHooked and ChatEdit_InsertLink then
+    hooksecurefunc("ChatEdit_InsertLink", function(link)
+      insertLinkIntoChatInput(link)
+    end)
+    UI.insertLinkHooked = true
+  end
 
   UI.frame = frame
   return frame
