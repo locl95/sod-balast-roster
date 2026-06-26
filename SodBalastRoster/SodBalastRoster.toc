@@ -11,5 +11,6 @@ History.lua
 Channel.lua
 Comm.lua
 Who.lua
+MinimapButton.lua
 UI.lua
 Core.lua

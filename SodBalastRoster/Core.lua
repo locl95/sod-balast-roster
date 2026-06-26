@@ -117,6 +117,7 @@ local function initialize()
   ns.History.Init()
   refreshLocalProfile(false)
   ns.Comm.RegisterPrefix()
+  ns.MinimapButton.Create()
 
   SLASH_SODBALASTROSTER1 = "/sb"
   SLASH_SODBALASTROSTER2 = "/sbr"

@@ -21,6 +21,10 @@ local defaults = {
     search = "",
     selectedTab = "roster",
   },
+  minimap = {
+    angle = 220,
+    hidden = false,
+  },
 }
 
 local function copyDefaults(target, source)
@@ -408,6 +412,10 @@ end
 
 function Store.GetUIState()
   return Store.GetDB().ui
+end
+
+function Store.GetMinimapState()
+  return Store.GetDB().minimap
 end
 
 function Store.GetLatestRosterUpdatedAt()
