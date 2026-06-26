@@ -74,6 +74,7 @@ function Store.GetMember(name)
     lastHistorySyncAt = 0,
     lastHistoryRequestedAt = 0,
     lastHistoryAdvertisedAt = 0,
+    pendingHistorySync = false,
     level = 0,
     classFile = "",
     zone = "",
@@ -277,7 +278,25 @@ function Store.MarkHistoryRequested(name, timestamp)
   local member = Store.GetMember(name)
   if member then
     member.lastHistoryRequestedAt = timestamp
+    member.pendingHistorySync = false
   end
+end
+
+function Store.MarkHistorySyncPending(name)
+  local member = Store.GetMember(name)
+  if member then
+    member.pendingHistorySync = true
+  end
+end
+
+function Store.ConsumePendingHistorySync(name)
+  local member = Store.GetMember(name)
+  if not member or not member.pendingHistorySync then
+    return false
+  end
+
+  member.pendingHistorySync = false
+  return true
 end
 
 function Store.GetHistorySyncAt(name)

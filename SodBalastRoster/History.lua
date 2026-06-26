@@ -27,6 +27,32 @@ local function nextEventId()
   return string.format("%s:%s", source, sequence), source
 end
 
+local function buildChannelMessageId(name, details, lineId, at)
+  if lineId and lineId ~= 0 and lineId ~= "" then
+    return string.format("chan:%s", tostring(lineId))
+  end
+
+  local bucket = math.floor((tonumber(at) or Utils.Now()) / 2)
+  return string.format("chan:%s:%s:%s", Utils.NormalizeName(name) or "?", Utils.Trim(details or ""), bucket)
+end
+
+local function hasEquivalentChannelMessage(name, details, at)
+  local normalizedName = Utils.NormalizeName(name) or "?"
+  details = Utils.Trim(details or "")
+  at = tonumber(at) or 0
+
+  for _, entry in ipairs(ns.db.history) do
+    if entry.type == "channel_message"
+      and (Utils.NormalizeName(entry.name) or "?") == normalizedName
+      and Utils.Trim(entry.details or "") == details
+      and math.abs((tonumber(entry.at) or 0) - at) <= 2 then
+      return true
+    end
+  end
+
+  return false
+end
+
 local function insertEntry(entry)
   local entries = ns.db.history
   entries[#entries + 1] = entry
@@ -74,8 +100,30 @@ function History.Add(eventType, name, details)
   return insertEntry(entry)
 end
 
+function History.AddWithId(eventId, eventType, name, details, at, source)
+  if not eventId or ns.historyIndex[eventId] then
+    return nil
+  end
+
+  local entry = {
+    id = eventId,
+    source = source or Utils.PlayerName() or "unknown",
+    type = eventType,
+    name = Utils.NormalizeName(name) or "?",
+    at = tonumber(at) or Utils.Now(),
+    details = details,
+  }
+
+  ns.historyDirty = true
+  return insertEntry(entry)
+end
+
 function History.AddImported(entry)
   if not entry or not entry.id or ns.historyIndex[entry.id] then
+    return nil, false
+  end
+
+  if entry.type == "channel_message" and hasEquivalentChannelMessage(entry.name, entry.details, entry.at) then
     return nil, false
   end
 
@@ -91,13 +139,18 @@ function History.AddImported(entry)
   return insertEntry(imported), true
 end
 
-function History.AddChannelMessage(sender, message)
+function History.AddChannelMessage(sender, message, lineId)
   message = Utils.Trim(message or "")
   if message == "" then
     return nil
   end
 
-  return History.Add("channel_message", sender, message)
+  local now = Utils.Now()
+  if hasEquivalentChannelMessage(sender, message, now) then
+    return nil
+  end
+
+  return History.AddWithId(buildChannelMessageId(sender, message, lineId, now), "channel_message", sender, message, now, Utils.NormalizeName(sender) or "channel")
 end
 
 function History.GetLatestTimestamp()

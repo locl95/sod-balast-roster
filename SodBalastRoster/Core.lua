@@ -160,9 +160,9 @@ Core:SetScript("OnEvent", function(_, event, ...)
   end
 
   if event == "CHAT_MSG_CHANNEL" then
-    local message, sender, _, channelName, _, _, _, _, channelBaseName = ...
+    local message, sender, _, channelName, _, _, _, _, channelBaseName, _, lineId = ...
     if ns.Utils.IsTargetChannel(channelName, channelBaseName) then
-      ns.History.AddChannelMessage(sender, message)
+      ns.History.AddChannelMessage(sender, message, lineId)
       refreshUI()
     end
     return
