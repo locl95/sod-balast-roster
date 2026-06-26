@@ -75,6 +75,9 @@ function Store.GetMember(name)
     lastHistoryRequestedAt = 0,
     lastHistoryAdvertisedAt = 0,
     pendingHistorySync = false,
+    pendingRosterSync = false,
+    lastRosterRequestedAt = 0,
+    lastRosterSyncAt = 0,
     level = 0,
     classFile = "",
     zone = "",
@@ -246,6 +249,46 @@ function Store.MarkProfileRequested(name, timestamp)
   end
 end
 
+function Store.ShouldRequestRoster(member, timestamp)
+  if not member or not member.hasAddon then
+    return false
+  end
+
+  return timestamp - (member.lastRosterRequestedAt or 0) >= ns.Constants.rosterSyncCooldown
+end
+
+function Store.MarkRosterRequested(name, timestamp)
+  local member = Store.GetMember(name)
+  if member then
+    member.lastRosterRequestedAt = timestamp
+    member.pendingRosterSync = false
+  end
+end
+
+function Store.MarkRosterSyncPending(name)
+  local member = Store.GetMember(name)
+  if member then
+    member.pendingRosterSync = true
+  end
+end
+
+function Store.ConsumePendingRosterSync(name)
+  local member = Store.GetMember(name)
+  if not member or not member.pendingRosterSync then
+    return false
+  end
+
+  member.pendingRosterSync = false
+  return true
+end
+
+function Store.MarkRosterSynced(name, timestamp)
+  local member = Store.GetMember(name)
+  if member then
+    member.lastRosterSyncAt = math.max(member.lastRosterSyncAt or 0, timestamp or 0)
+  end
+end
+
 function Store.ShouldRequestWho(member, timestamp)
   if not member or member.hasAddon then
     return false
@@ -380,6 +423,35 @@ function Store.GetVisibleRoster()
   end)
 
   return results
+end
+
+function Store.ExportRosterProfiles(limit)
+  local results = {}
+  local cutoff = Utils.Now() - ns.Constants.rosterSyncWindow
+
+  for _, member in pairs(Store.GetRoster()) do
+    local hasKnownProfile = member.hasAddon or (member.level or 0) > 0 or member.classFile ~= "" or member.zone ~= "" or member.guildName ~= "" or member.profession1 ~= "" or member.profession2 ~= ""
+    local isRecent = (member.lastSeenAt or 0) >= cutoff or member.isOnlineInChannel
+    if member.name ~= Utils.PlayerName() and hasKnownProfile and isRecent then
+      results[#results + 1] = member
+    end
+  end
+
+  table.sort(results, function(left, right)
+    return (left.lastSeenAt or 0) > (right.lastSeenAt or 0)
+  end)
+
+  limit = limit or ns.Constants.rosterSyncLimit
+  if #results <= limit then
+    return results
+  end
+
+  local trimmed = {}
+  for index = 1, limit do
+    trimmed[#trimmed + 1] = results[index]
+  end
+
+  return trimmed
 end
 
 function Store.GetOnlineAddonMembers()

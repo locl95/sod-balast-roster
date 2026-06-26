@@ -65,6 +65,24 @@ local function encodeHistoryEntry(entry)
   }, ";")
 end
 
+local function encodeRosterProfile(member)
+  return table.concat({
+    "RPRO",
+    ns.Constants.protocolVersion,
+    Utils.EscapeField(member.name or ""),
+    member.hasAddon and "1" or "0",
+    tostring(member.level or 0),
+    Utils.EscapeField(member.classFile or ""),
+    Utils.EscapeField(member.zone or ""),
+    Utils.EscapeField(member.guildName or ""),
+    Utils.EscapeField(member.profession1 or ""),
+    Utils.EscapeField(member.profession2 or ""),
+    tostring(member.profession1Icon or ""),
+    tostring(member.profession2Icon or ""),
+    tostring(member.lastSeenAt or 0),
+  }, ";")
+end
+
 function Comm.QueueProfileRequest(name)
   name = Utils.NormalizeName(name)
   if not name or name == Utils.PlayerName() then
@@ -84,6 +102,16 @@ function Comm.QueueHistoryRequest(name)
   local sinceAt = Store.GetHistorySyncAt(name)
   Store.MarkHistoryRequested(name, Utils.Now())
   queueMessage(name, string.format("HREQ;%s;%s", ns.Constants.protocolVersion, tostring(sinceAt)), "HREQ|" .. name)
+end
+
+function Comm.QueueRosterRequest(name)
+  name = Utils.NormalizeName(name)
+  if not name or name == Utils.PlayerName() then
+    return
+  end
+
+  Store.MarkRosterRequested(name, Utils.Now())
+  queueMessage(name, string.format("RREQ;%s", ns.Constants.protocolVersion), "RREQ|" .. name)
 end
 
 function Comm.SendInfo(target)
@@ -165,6 +193,13 @@ function Comm.SendHistorySince(target, sinceAt)
   end
 end
 
+function Comm.SendRosterProfiles(target)
+  local profiles = Store.ExportRosterProfiles(ns.Constants.rosterSyncLimit)
+  for _, member in ipairs(profiles) do
+    queueMessage(target, encodeRosterProfile(member), string.format("RPRO|%s|%s", target, member.name))
+  end
+end
+
 function Comm.FlushQueue()
   if #Comm.queue == 0 then
     return
@@ -228,6 +263,9 @@ function Comm.HandleInfo(parts, sender)
     if Store.ConsumePendingHistorySync(name) and Store.ShouldRequestHistory(member, Utils.Now()) then
       Comm.QueueHistoryRequest(name)
     end
+    if Store.ConsumePendingRosterSync(name) and Store.ShouldRequestRoster(member, Utils.Now()) then
+      Comm.QueueRosterRequest(name)
+    end
     return
   end
 
@@ -248,11 +286,18 @@ function Comm.HandleInfo(parts, sender)
   if Store.ConsumePendingHistorySync(name) and Store.ShouldRequestHistory(member, Utils.Now()) then
     Comm.QueueHistoryRequest(name)
   end
+  if Store.ConsumePendingRosterSync(name) and Store.ShouldRequestRoster(member, Utils.Now()) then
+    Comm.QueueRosterRequest(name)
+  end
 end
 
 function Comm.HandleHistoryRequest(parts, sender)
   local sinceAt = tonumber(parts[3]) or 0
   Comm.SendHistorySince(sender, sinceAt)
+end
+
+function Comm.HandleRosterRequest(_, sender)
+  Comm.SendRosterProfiles(sender)
 end
 
 function Comm.HandleHistorySummary(parts, sender)
@@ -276,6 +321,38 @@ function Comm.HandleHistoryEvent(parts, sender)
   end
 
   Store.MarkHistorySynced(sender, entry.at)
+end
+
+function Comm.HandleRosterProfile(parts, sender)
+  local name = Utils.NormalizeName(Utils.UnescapeField(parts[3]))
+  if not name or name == Utils.PlayerName() then
+    return
+  end
+
+  local hasAddon = parts[4] == "1"
+  local timestamp = tonumber(parts[13]) or 0
+  local member = Store.UpsertMember(name, {
+    hasAddon = hasAddon,
+    firstSeenAt = Store.GetMember(name).firstSeenAt,
+    lastSeenAt = math.max(Store.GetMember(name).lastSeenAt or 0, timestamp),
+  })
+
+  Store.SetProfile(name, {
+    level = parts[5],
+    classFile = Utils.UnescapeField(parts[6]),
+    zone = Utils.UnescapeField(parts[7]),
+    guildName = Utils.UnescapeField(parts[8]),
+    profession1 = Utils.UnescapeField(parts[9]),
+    profession2 = Utils.UnescapeField(parts[10]),
+    profession1Icon = parts[11],
+    profession2Icon = parts[12],
+  }, timestamp > 0 and timestamp or Utils.Now())
+
+  if member then
+    member.hasAddon = hasAddon
+  end
+
+  Store.MarkRosterSynced(sender, timestamp)
 end
 
 function Comm.HandleAddonMessage(prefix, text, _, sender)
@@ -310,6 +387,11 @@ function Comm.HandleAddonMessage(prefix, text, _, sender)
     return
   end
 
+  if messageType == "RREQ" then
+    Comm.HandleRosterRequest(parts, senderName)
+    return
+  end
+
   if messageType == "HSUM" then
     Comm.HandleHistorySummary(parts, senderName)
     return
@@ -317,6 +399,11 @@ function Comm.HandleAddonMessage(prefix, text, _, sender)
 
   if messageType == "HEVT" then
     Comm.HandleHistoryEvent(parts, senderName)
+    return
+  end
+
+  if messageType == "RPRO" then
+    Comm.HandleRosterProfile(parts, senderName)
     return
   end
 

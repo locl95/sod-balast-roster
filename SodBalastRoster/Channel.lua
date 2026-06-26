@@ -97,6 +97,7 @@ function Channel.ScanRoster()
       if justJoined then
         History.Add("joined_channel", name)
         Store.MarkHistorySyncPending(name)
+        Store.MarkRosterSyncPending(name)
       end
 
       if member and member.name ~= Utils.PlayerName() and (justJoined or Store.ShouldRequestProfile(member, timestamp)) then

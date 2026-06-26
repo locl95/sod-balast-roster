@@ -13,6 +13,9 @@ ns.Constants = {
   whoRequestInterval = 6,
   whoProfileTTL = 30 * 60,
   profileTTL = 15 * 60,
+  rosterSyncCooldown = 5 * 60,
+  rosterSyncWindow = 7 * 24 * 60 * 60,
+  rosterSyncLimit = 50,
   historySummaryCooldown = 30,
   historySyncCooldown = 60,
   historySyncWindow = 24 * 60 * 60,
@@ -110,7 +113,7 @@ function Utils.ResolveProfessionIcon(name, icon)
 end
 
 function Utils.IsSupportedProtocolVersion(version)
-  return version == "1" or version == "2"
+  return version == "1" or version == "2" or version == "3"
 end
 
 function Utils.SafeProfessions()
