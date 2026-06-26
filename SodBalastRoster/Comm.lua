@@ -231,16 +231,34 @@ function Comm.HandleInfo(parts, sender)
   local existing = Store.GetMember(name)
   local hadAddon = existing and existing.hasAddon or false
   local hadProfile = existing and (existing.lastProfileAt or 0) > 0 or false
-  local advertisedAt = tonumber(parts[12]) or 0
+  local version = parts[2]
+  local advertisedAt = 0
+  local profession1 = ""
+  local profession2 = ""
+  local profession1Icon = ""
+  local profession2Icon = ""
+
+  if version == "1" then
+    advertisedAt = tonumber(parts[10]) or 0
+    profession1 = Utils.UnescapeField(parts[8])
+    profession2 = Utils.UnescapeField(parts[9])
+  else
+    advertisedAt = tonumber(parts[12]) or 0
+    profession1 = Utils.UnescapeField(parts[8])
+    profession2 = Utils.UnescapeField(parts[9])
+    profession1Icon = parts[10]
+    profession2Icon = parts[11]
+  end
+
   local member, changes = Store.SetProfile(name, {
     level = parts[4],
     classFile = parts[5],
     zone = parts[6],
     guildName = parts[7],
-    profession1 = Utils.UnescapeField(parts[8]),
-    profession2 = Utils.UnescapeField(parts[9]),
-    profession1Icon = parts[10],
-    profession2Icon = parts[11],
+    profession1 = profession1,
+    profession2 = profession2,
+    profession1Icon = profession1Icon,
+    profession2Icon = profession2Icon,
   }, Utils.Now())
 
   Store.MarkHistoryAdvertised(name, advertisedAt)
@@ -315,7 +333,7 @@ function Comm.HandleAddonMessage(prefix, text, _, sender)
   local parts = Utils.SplitMessage(text, ";")
   local messageType = parts[1]
   local version = parts[2]
-  if version ~= ns.Constants.protocolVersion then
+  if not Utils.IsSupportedProtocolVersion(version) then
     return
   end
 

@@ -169,12 +169,15 @@ end
 local function getProfessionIconsText(member)
   local icons = {}
 
-  if member.profession1Icon and member.profession1Icon ~= "" and tostring(member.profession1Icon) ~= "0" then
-    icons[#icons + 1] = string.format("|T%s:14:14:0:0|t", tostring(member.profession1Icon))
+  local icon1 = Utils.ResolveProfessionIcon(member.profession1, member.profession1Icon)
+  local icon2 = Utils.ResolveProfessionIcon(member.profession2, member.profession2Icon)
+
+  if icon1 and icon1 ~= "" and tostring(icon1) ~= "0" then
+    icons[#icons + 1] = string.format("|T%s:14:14:0:0|t", tostring(icon1))
   end
 
-  if member.profession2Icon and member.profession2Icon ~= "" and tostring(member.profession2Icon) ~= "0" then
-    icons[#icons + 1] = string.format("|T%s:14:14:0:0|t", tostring(member.profession2Icon))
+  if icon2 and icon2 ~= "" and tostring(icon2) ~= "0" then
+    icons[#icons + 1] = string.format("|T%s:14:14:0:0|t", tostring(icon2))
   end
 
   if #icons > 0 then

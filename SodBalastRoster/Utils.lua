@@ -5,7 +5,7 @@ ns = ns or {}
 ns.Constants = {
   channelName = "SODBALAST",
   addonPrefix = "SBRoster",
-  protocolVersion = "1",
+  protocolVersion = "2",
   scanInterval = 30,
   fullMissingThreshold = 2,
   partialMissingThreshold = 4,
@@ -68,6 +68,10 @@ function Utils.ResolveProfessionIcon(name, icon)
 
   local _, _, texture = GetSpellInfo(name)
   return texture or ""
+end
+
+function Utils.IsSupportedProtocolVersion(version)
+  return version == "1" or version == "2"
 end
 
 function Utils.SafeProfessions()
