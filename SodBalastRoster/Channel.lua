@@ -98,6 +98,9 @@ function Channel.ScanRoster()
         History.Add("joined_channel", name)
         Store.MarkHistorySyncPending(name)
         Store.MarkRosterSyncPending(name)
+        if member and member.hasAddon then
+          Store.MarkAddonProbePending(name, timestamp)
+        end
       end
 
       if member and member.name ~= Utils.PlayerName() and (justJoined or Store.ShouldRequestProfile(member, timestamp)) then
@@ -134,6 +137,8 @@ function Channel.ScanRoster()
       History.Add("left_channel", member.name)
     end
   end
+
+  Store.DowngradeMissingAddonResponses(timestamp)
 
   Channel.lastScanOk = true
   if Channel.lastScanReason ~= "roster_names_unresolved" and Channel.lastScanReason ~= "partial_roster_resolved" then

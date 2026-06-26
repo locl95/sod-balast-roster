@@ -73,6 +73,8 @@ function Store.GetMember(name)
     name = name,
     isOnlineInChannel = false,
     hasAddon = false,
+    pendingAddonProbe = false,
+    lastAddonProbeAt = 0,
     firstSeenAt = 0,
     lastSeenAt = 0,
     lastUpdatedAt = 0,
@@ -132,6 +134,36 @@ function Store.MarkSeenInChannel(name, timestamp)
   member.missingScans = 0
 
   return member, not wasOnline
+end
+
+function Store.MarkAddonProbePending(name, timestamp)
+  local member = Store.GetMember(name)
+  if member then
+    member.pendingAddonProbe = true
+    member.lastAddonProbeAt = timestamp or Utils.Now()
+  end
+end
+
+function Store.ClearAddonProbe(name)
+  local member = Store.GetMember(name)
+  if member then
+    member.pendingAddonProbe = false
+  end
+end
+
+function Store.DowngradeMissingAddonResponses(timestamp)
+  local changed = {}
+  local timeout = ns.Constants.addonProbeTimeout or 20
+
+  for _, member in pairs(Store.GetRoster()) do
+    if member.isOnlineInChannel and member.hasAddon and member.pendingAddonProbe and (timestamp - (member.lastAddonProbeAt or 0)) >= timeout then
+      member.hasAddon = false
+      member.pendingAddonProbe = false
+      changed[#changed + 1] = member
+    end
+  end
+
+  return changed
 end
 
 function Store.MarkOffline(name)
@@ -199,6 +231,7 @@ function Store.SetProfile(name, profile, timestamp)
   apply("profession2Icon", profile.profession2Icon)
 
   member.hasAddon = true
+  member.pendingAddonProbe = false
   member.lastProfileAt = timestamp
   if next(changes) ~= nil then
     member.lastUpdatedAt = timestamp

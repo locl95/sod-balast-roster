@@ -422,6 +422,8 @@ function Comm.HandleAddonMessage(prefix, text, _, sender)
     return
   end
 
+  Store.UpsertMember(senderName, { hasAddon = true, pendingAddonProbe = false })
+
   local parts = Utils.SplitMessage(text, ";")
   local messageType = parts[1]
   local version = parts[2]

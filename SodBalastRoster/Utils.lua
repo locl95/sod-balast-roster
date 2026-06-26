@@ -10,6 +10,7 @@ ns.Constants = {
   fullMissingThreshold = 2,
   partialMissingThreshold = 4,
   requestInterval = 1,
+  addonProbeTimeout = 20,
   whoRequestInterval = 6,
   whoProfileTTL = 30 * 60,
   profileTTL = 15 * 60,
