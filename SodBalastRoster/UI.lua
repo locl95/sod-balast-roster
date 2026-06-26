@@ -18,6 +18,20 @@ local TAB_TEXTURES = {
   [TAB_HISTORY] = "Interface\\ChatFrame\\UI-ChatIcon-Chat-Up",
 }
 
+local function registerSpecialFrame(frameName)
+  if not frameName or not UISpecialFrames then
+    return
+  end
+
+  for _, existing in ipairs(UISpecialFrames) do
+    if existing == frameName then
+      return
+    end
+  end
+
+  table.insert(UISpecialFrames, frameName)
+end
+
 local HISTORY_LABELS = {
   channel_message = "message",
   joined_channel = "joined channel",
@@ -65,6 +79,7 @@ local function ensureContextMenu()
   menu:SetClampedToScreen(true)
   menu:EnableMouse(true)
   menu:SetSize(170, 132)
+  registerSpecialFrame("SodBalastRosterContextMenu")
 
   if menu.SetBackdrop then
     menu:SetBackdrop({
@@ -504,6 +519,7 @@ function UI.Create()
     Store.SaveFramePosition(self)
   end)
   frame:Hide()
+  registerSpecialFrame("SodBalastRosterFrame")
 
   frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
   frame.title:SetPoint("LEFT", frame.TitleBg, "LEFT", 8, 0)
