@@ -8,6 +8,29 @@ local refreshUI
 
 local lastRosterSummaryAt = 0
 local lastChatSummaryAt = 0
+local pendingRescanBurstId = 0
+
+local function runScanAndRefresh()
+  ns.Channel.EnsureJoined()
+  ns.Channel.ScanRoster()
+  refreshUI()
+end
+
+local function scheduleRescanBurst()
+  pendingRescanBurstId = pendingRescanBurstId + 1
+  local burstId = pendingRescanBurstId
+  local delays = { 0.5, 1.5, 3.0 }
+
+  for _, delay in ipairs(delays) do
+    C_Timer.After(delay, function()
+      if burstId ~= pendingRescanBurstId then
+        return
+      end
+
+      runScanAndRefresh()
+    end)
+  end
+end
 
 local function requestBootstrapSync()
   ns.Comm.SendRosterSummaries(ns.Constants.maxBootstrapDonors)
@@ -53,12 +76,13 @@ local function runDebug()
     local scanOk, reason = ns.Channel.ScanRoster()
     local status = ns.Channel.DebugStatus()
     local summary = string.format(
-      "debug channelId=%s displayIndex=%s visibleCount=%s memberCount=%s resolvedCount=%s scanOk=%s reason=%s",
+      "debug channelId=%s displayIndex=%s visibleCount=%s memberCount=%s resolvedCount=%s stableScans=%s scanOk=%s reason=%s",
       tostring(status.channelId),
       tostring(status.displayIndex),
       tostring(status.visibleCount),
       tostring(status.lastMemberCount),
       tostring(status.lastResolvedCount),
+      tostring(status.stableScanCount),
       tostring(scanOk),
       tostring(reason)
     )
@@ -74,8 +98,31 @@ local function runDebug()
       ns.Utils.Print("fallback candidate: " .. tostring(status.lastFallbackPlayer))
     end
 
-    for _, line in ipairs(ns.Utils.DebugProfessions()) do
-      ns.Utils.Print(line)
+    local onlineMembers = {}
+    for _, member in pairs(ns.Store.GetRoster()) do
+      if member.isOnlineInChannel then
+        onlineMembers[#onlineMembers + 1] = member
+      end
+    end
+
+    table.sort(onlineMembers, function(left, right)
+      return left.name < right.name
+    end)
+
+    ns.Utils.Print("local online roster count: " .. tostring(#onlineMembers))
+    for _, member in ipairs(onlineMembers) do
+      ns.Utils.Print(string.format(
+        "member name=%s addon=%s level=%s class=%s zone=%s guild=%s lastSeen=%s pendingJoin=%s missingScans=%s",
+        tostring(member.name),
+        tostring(member.hasAddon),
+        tostring(member.level or 0),
+        tostring(member.classFile or ""),
+        tostring(member.zone or ""),
+        tostring(member.guildName or ""),
+        tostring(member.lastSeenAt or 0),
+        tostring(member.pendingJoin),
+        tostring(member.missingScans or 0)
+      ))
     end
   end)
 
@@ -134,9 +181,9 @@ local function initialize()
   ns.Utils.Print("loaded. Use /sb to open, /sbd or Debug for channel diagnostics.")
   C_Timer.After(2, function()
     refreshLocalProfile(true)
-    ns.Channel.ScanRoster()
+    runScanAndRefresh()
     requestBootstrapSync()
-    refreshUI()
+    scheduleRescanBurst()
   end)
 end
 
@@ -150,9 +197,9 @@ Core:SetScript("OnEvent", function(_, event, ...)
     refreshLocalProfile(true)
     ns.Channel.EnsureJoined()
     C_Timer.After(2, function()
-      ns.Channel.ScanRoster()
+      runScanAndRefresh()
       requestBootstrapSync()
-      refreshUI()
+      scheduleRescanBurst()
     end)
     return
   end
@@ -169,8 +216,8 @@ Core:SetScript("OnEvent", function(_, event, ...)
   end
 
   if event == "CHANNEL_UI_UPDATE" or event == "CHAT_MSG_CHANNEL_NOTICE" then
-    ns.Channel.ScanRoster()
-    refreshUI()
+    runScanAndRefresh()
+    scheduleRescanBurst()
     return
   end
 
@@ -218,9 +265,7 @@ Core:SetScript("OnUpdate", function(_, elapsed)
   end
 
   if ns.Channel.ShouldScan() then
-    ns.Channel.EnsureJoined()
-    ns.Channel.ScanRoster()
-    refreshUI()
+    runScanAndRefresh()
   end
 end)
 

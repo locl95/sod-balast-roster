@@ -174,5 +174,6 @@ function Channel.DebugStatus()
     lastResolvedCount = Channel.lastResolvedCount,
     lastResolvedNames = Channel.lastResolvedNames,
     lastFallbackPlayer = Channel.lastFallbackPlayer,
+    stableScanCount = Channel.stableScanCount,
   }
 end
