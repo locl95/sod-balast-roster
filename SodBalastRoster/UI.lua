@@ -844,7 +844,9 @@ function UI.Create()
     if self.SetPropagateKeyboardInput then
       self:SetPropagateKeyboardInput(true)
     end
-    registerSpecialFrame("SodBalastRosterFrame")
+    C_Timer.After(0, function()
+      registerSpecialFrame("SodBalastRosterFrame")
+    end)
   end)
   frame.chatInput:SetScript("OnEnterPressed", function(self)
     sendChatMessageFromInput()
