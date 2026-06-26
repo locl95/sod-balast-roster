@@ -370,19 +370,30 @@ local function scrollHistoryToBottom()
 end
 
 local function restoreHistoryScroll(position)
-  if not UI.frame or not UI.frame.historyBox or not position or position <= 0 then
+  if not UI.frame or not UI.frame.historyBox or position == nil then
     return
   end
 
   local box = UI.frame.historyBox
-  if box.ScrollToTop then
-    box:ScrollToTop()
+  if position <= 0 then
+    scrollHistoryToBottom()
+    return
   end
 
-  for _ = 1, position do
+  local current = UI.frame.historyScrollPosition or 0
+
+  while current < position do
     if box.ScrollUp then
       box:ScrollUp()
     end
+    current = current + 1
+  end
+
+  while current > position do
+    if box.ScrollDown then
+      box:ScrollDown()
+    end
+    current = current - 1
   end
 
   UI.frame.historyScrollPosition = position
