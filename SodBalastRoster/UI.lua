@@ -43,6 +43,17 @@ local function isDescendantFrame(frame, ancestor)
   return false
 end
 
+local function isRosterRowFrame(frame)
+  while frame do
+    if frame.isRosterRow or frame.isRosterRowInteractive then
+      return true
+    end
+    frame = frame:GetParent()
+  end
+
+  return false
+end
+
 local HISTORY_LABELS = {
   channel_message = "message",
   joined_channel = "joined channel",
@@ -305,6 +316,7 @@ end
 
 local function createRow(parent, index)
   local row = CreateFrame("Button", nil, parent)
+  row.isRosterRow = true
   row:SetSize(848, ROW_HEIGHT)
   row:SetPoint("TOPLEFT", parent, "TOPLEFT", 8, -120 - ((index - 1) * ROW_HEIGHT))
   row:EnableMouse(true)
@@ -330,6 +342,7 @@ local function createRow(parent, index)
   row.name:SetPoint("LEFT", row.addon, "RIGHT", 4, 0)
 
   row.nameButton = CreateFrame("Button", nil, row)
+  row.nameButton.isRosterRowInteractive = true
   row.nameButton:SetSize(150, ROW_HEIGHT)
   row.nameButton:SetPoint("LEFT", row.addon, "RIGHT", 4, 0)
   row.nameButton:EnableMouse(true)
@@ -556,6 +569,26 @@ function UI.Create()
   frame:SetScript("OnDragStop", function(self)
     self:StopMovingOrSizing()
     Store.SaveFramePosition(self)
+  end)
+  frame:SetScript("OnMouseDown", function(self, button)
+    if button ~= "LeftButton" and button ~= "RightButton" then
+      return
+    end
+
+    if not UI.contextMenu or not UI.contextMenu:IsShown() then
+      return
+    end
+
+    local focus = GetMouseFocus and GetMouseFocus() or nil
+    if isDescendantFrame(focus, UI.contextMenu) then
+      return
+    end
+
+    if isRosterRowFrame(focus) then
+      return
+    end
+
+    UI.contextMenu:Hide()
   end)
   frame:Hide()
   registerSpecialFrame("SodBalastRosterFrame")
