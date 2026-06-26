@@ -889,6 +889,19 @@ function UI.Create()
     UI.insertLinkHooked = true
   end
 
+  frame:SetScript("OnHide", function(self)
+    self:StopMovingOrSizing()
+    if frame.chatInput then
+      frame.chatInput:ClearFocus()
+    end
+    if frame.searchBox then
+      frame.searchBox:ClearFocus()
+    end
+    if UI.contextMenu and UI.contextMenu:IsShown() then
+      UI.contextMenu:Hide()
+    end
+  end)
+
   UI.frame = frame
   return frame
 end
