@@ -22,3 +22,5 @@ Documentacion inicial creada y scaffold del addon arrancado.
 - `docs/product-spec.md`: alcance funcional y reglas del producto.
 - `docs/architecture.md`: arquitectura tecnica y modelo de datos.
 - `docs/implementation-plan.md`: orden de trabajo y entregas.
+- `docs/sync-cycles.md`: ciclos de sincronizacion y reconciliacion de roster/chat.
+- `docs/manual-testing.md`: pruebas manuales recomendadas para validar el addon.

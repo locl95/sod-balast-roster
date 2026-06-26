@@ -5,7 +5,7 @@ ns = ns or {}
 ns.Constants = {
   channelName = "SODBALAST",
   addonPrefix = "SBRoster",
-  protocolVersion = "2",
+  protocolVersion = "4",
   scanInterval = 30,
   fullMissingThreshold = 2,
   partialMissingThreshold = 4,
@@ -13,13 +13,16 @@ ns.Constants = {
   whoRequestInterval = 6,
   whoProfileTTL = 30 * 60,
   profileTTL = 15 * 60,
+  rosterSummaryInterval = 5 * 60,
   rosterSyncCooldown = 5 * 60,
   rosterSyncWindow = 7 * 24 * 60 * 60,
   rosterSyncLimit = 50,
-  historySummaryCooldown = 30,
+  chatSummaryInterval = 3 * 60,
   historySyncCooldown = 60,
   historySyncWindow = 24 * 60 * 60,
   historySyncLimit = 50,
+  maxBootstrapDonors = 2,
+  maxPeriodicDonors = 1,
   maxHistoryEntries = 500,
 }
 
@@ -113,7 +116,7 @@ function Utils.ResolveProfessionIcon(name, icon)
 end
 
 function Utils.IsSupportedProtocolVersion(version)
-  return version == "1" or version == "2" or version == "3"
+  return version == "1" or version == "2" or version == "3" or version == "4"
 end
 
 function Utils.SafeProfessions()

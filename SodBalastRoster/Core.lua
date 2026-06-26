@@ -2,9 +2,17 @@ local addonName, ns = ...
 
 local Core = CreateFrame("Frame")
 ns.Core = Core
-ns.version = "0.1.3"
+ns.version = "0.1.4"
 
 local refreshUI
+
+local lastRosterSummaryAt = 0
+local lastChatSummaryAt = 0
+
+local function requestBootstrapSync()
+  ns.Comm.SendRosterSummaries(ns.Constants.maxBootstrapDonors)
+  ns.Comm.SendChatSummaries(ns.Constants.maxBootstrapDonors)
+end
 
 local function refreshLocalProfile(shouldBroadcast)
   local profession1, profession2, profession1Icon, profession2Icon = ns.Utils.SafeProfessions()
@@ -126,6 +134,7 @@ local function initialize()
   C_Timer.After(2, function()
     refreshLocalProfile(true)
     ns.Channel.ScanRoster()
+    requestBootstrapSync()
     refreshUI()
   end)
 end
@@ -139,6 +148,11 @@ Core:SetScript("OnEvent", function(_, event, ...)
   if event == "PLAYER_ENTERING_WORLD" then
     refreshLocalProfile(true)
     ns.Channel.EnsureJoined()
+    C_Timer.After(2, function()
+      ns.Channel.ScanRoster()
+      requestBootstrapSync()
+      refreshUI()
+    end)
     return
   end
 
@@ -190,7 +204,17 @@ Core:SetScript("OnUpdate", function(_, elapsed)
   Core.elapsed = 0
   ns.Comm.FlushQueue()
   ns.Who.CheckTimeout()
-  ns.Comm.MaybeBroadcastHistorySummary()
+
+  local now = ns.Utils.Now()
+  if now - lastRosterSummaryAt >= ns.Constants.rosterSummaryInterval then
+    ns.Comm.SendRosterSummaries(ns.Constants.maxPeriodicDonors)
+    lastRosterSummaryAt = now
+  end
+
+  if now - lastChatSummaryAt >= ns.Constants.chatSummaryInterval then
+    ns.Comm.SendChatSummaries(ns.Constants.maxPeriodicDonors)
+    lastChatSummaryAt = now
+  end
 
   if ns.Channel.ShouldScan() then
     ns.Channel.EnsureJoined()

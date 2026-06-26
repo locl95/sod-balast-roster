@@ -163,6 +163,16 @@ function History.GetLatestTimestamp()
   return latest
 end
 
+function History.GetLatestChatAt()
+  local latest = 0
+  for _, entry in ipairs(History.GetEntries()) do
+    if entry.type == "channel_message" and (entry.at or 0) > latest then
+      latest = entry.at or 0
+    end
+  end
+  return latest
+end
+
 function History.ExportRecentSince(sinceAt, limit)
   sinceAt = tonumber(sinceAt) or 0
   limit = limit or ns.Constants.historySyncLimit
@@ -172,6 +182,32 @@ function History.ExportRecentSince(sinceAt, limit)
 
   for _, entry in ipairs(History.GetEntries()) do
     if (entry.at or 0) > sinceAt and (entry.at or 0) >= windowStart then
+      eligible[#eligible + 1] = entry
+    end
+  end
+
+  if #eligible <= limit then
+    return eligible
+  end
+
+  local startIndex = #eligible - limit + 1
+  local recent = {}
+  for index = startIndex, #eligible do
+    recent[#recent + 1] = eligible[index]
+  end
+
+  return recent
+end
+
+function History.ExportChatSince(sinceAt, limit)
+  sinceAt = tonumber(sinceAt) or 0
+  limit = limit or ns.Constants.historySyncLimit
+
+  local windowStart = Utils.Now() - ns.Constants.historySyncWindow
+  local eligible = {}
+
+  for _, entry in ipairs(History.GetEntries()) do
+    if entry.type == "channel_message" and (entry.at or 0) > sinceAt and (entry.at or 0) >= windowStart then
       eligible[#eligible + 1] = entry
     end
   end

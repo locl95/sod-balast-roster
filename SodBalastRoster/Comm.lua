@@ -80,6 +80,19 @@ local function encodeRosterProfile(member)
     tostring(member.profession1Icon or ""),
     tostring(member.profession2Icon or ""),
     tostring(member.lastSeenAt or 0),
+    tostring(member.lastUpdatedAt or 0),
+  }, ";")
+end
+
+local function encodeChatMessage(entry)
+  return table.concat({
+    "CMSG",
+    ns.Constants.protocolVersion,
+    Utils.EscapeField(entry.id),
+    tostring(entry.at or 0),
+    Utils.EscapeField(entry.source or ""),
+    Utils.EscapeField(entry.name or ""),
+    Utils.EscapeField(entry.details or ""),
   }, ";")
 end
 
@@ -90,7 +103,7 @@ function Comm.QueueProfileRequest(name)
   end
 
   Store.MarkProfileRequested(name, Utils.Now())
-  queueMessage(name, "REQ;1", "REQ|" .. name)
+  queueMessage(name, string.format("REQ;%s", ns.Constants.protocolVersion), "REQ|" .. name)
 end
 
 function Comm.QueueHistoryRequest(name)
@@ -99,9 +112,7 @@ function Comm.QueueHistoryRequest(name)
     return
   end
 
-  local sinceAt = Store.GetHistorySyncAt(name)
-  Store.MarkHistoryRequested(name, Utils.Now())
-  queueMessage(name, string.format("HREQ;%s;%s", ns.Constants.protocolVersion, tostring(sinceAt)), "HREQ|" .. name)
+  Comm.QueueChatRequest(name, Store.GetHistorySyncAt(name))
 end
 
 function Comm.QueueRosterRequest(name)
@@ -110,8 +121,20 @@ function Comm.QueueRosterRequest(name)
     return
   end
 
+  local sinceAt = Store.GetLatestRosterUpdatedAt()
   Store.MarkRosterRequested(name, Utils.Now())
-  queueMessage(name, string.format("RREQ;%s", ns.Constants.protocolVersion), "RREQ|" .. name)
+  queueMessage(name, string.format("RREQ;%s;%s", ns.Constants.protocolVersion, tostring(sinceAt)), "RREQ|" .. name)
+end
+
+function Comm.QueueChatRequest(name, sinceAt)
+  name = Utils.NormalizeName(name)
+  if not name or name == Utils.PlayerName() then
+    return
+  end
+
+  sinceAt = tonumber(sinceAt) or History.GetLatestChatAt()
+  Store.MarkChatRequested(name, Utils.Now())
+  queueMessage(name, string.format("CREQ;%s;%s", ns.Constants.protocolVersion, tostring(sinceAt)), "CREQ|" .. name)
 end
 
 function Comm.SendInfo(target)
@@ -133,7 +156,7 @@ function Comm.SendInfo(target)
     Utils.EscapeField(profession2),
     tostring(profession1Icon or ""),
     tostring(profession2Icon or ""),
-    tostring(History.GetLatestTimestamp()),
+    tostring(History.GetLatestChatAt()),
   }, ";")
 
   sendAddonWhisper(payload, target)
@@ -146,22 +169,26 @@ function Comm.BroadcastInfo()
   end
 end
 
-function Comm.QueueHistorySummary(target, latestAt)
-  target = Utils.NormalizeName(target)
-  latestAt = tonumber(latestAt) or 0
-  if not target or target == Utils.PlayerName() or latestAt <= 0 then
-    return
-  end
-
-  queueMessage(
-    target,
-    string.format("HSUM;%s;%s;%s", ns.Constants.protocolVersion, Utils.PlayerName() or "", tostring(latestAt)),
-    string.format("HSUM|%s|%s", target, tostring(latestAt))
-  )
+function Comm.SendRosterSummary(target)
+  queueMessage(target, string.format("RSUM;%s;%s;%s;%s", ns.Constants.protocolVersion, Utils.PlayerName() or "", tostring(Store.GetLatestRosterUpdatedAt()), tostring(#Store.ExportRosterProfiles(ns.Constants.rosterSyncLimit, 0))), string.format("RSUM|%s", target))
 end
 
-function Comm.MaybeBroadcastHistorySummary()
-  return
+function Comm.SendChatSummary(target)
+  queueMessage(target, string.format("CSUM;%s;%s;%s;%s", ns.Constants.protocolVersion, Utils.PlayerName() or "", tostring(History.GetLatestChatAt()), tostring(#History.ExportChatSince(0, ns.Constants.historySyncLimit))), string.format("CSUM|%s", target))
+end
+
+function Comm.SendRosterSummaries(maxDonors)
+  local donors = Store.SelectSyncDonors(maxDonors or ns.Constants.maxPeriodicDonors)
+  for _, donor in ipairs(donors) do
+    Comm.SendRosterSummary(donor)
+  end
+end
+
+function Comm.SendChatSummaries(maxDonors)
+  local donors = Store.SelectSyncDonors(maxDonors or ns.Constants.maxPeriodicDonors)
+  for _, donor in ipairs(donors) do
+    Comm.SendChatSummary(donor)
+  end
 end
 
 function Comm.SendBye(target)
@@ -187,14 +214,21 @@ function Comm.BroadcastBye()
 end
 
 function Comm.SendHistorySince(target, sinceAt)
-  local events = History.ExportRecentSince(sinceAt, ns.Constants.historySyncLimit)
+  local events = History.ExportChatSince(sinceAt, ns.Constants.historySyncLimit)
   for index, entry in ipairs(events) do
-    queueMessage(target, encodeHistoryEntry(entry), string.format("HEVT|%s|%s", target, entry.id or index))
+    queueMessage(target, encodeChatMessage(entry), string.format("CMSG|%s|%s", target, entry.id or index))
   end
 end
 
 function Comm.SendRosterProfiles(target)
-  local profiles = Store.ExportRosterProfiles(ns.Constants.rosterSyncLimit)
+  local profiles = Store.ExportRosterProfiles(ns.Constants.rosterSyncLimit, 0)
+  for _, member in ipairs(profiles) do
+    queueMessage(target, encodeRosterProfile(member), string.format("RPRO|%s|%s", target, member.name))
+  end
+end
+
+function Comm.SendRosterProfilesSince(target, sinceAt)
+  local profiles = Store.ExportRosterProfiles(ns.Constants.rosterSyncLimit, sinceAt)
   for _, member in ipairs(profiles) do
     queueMessage(target, encodeRosterProfile(member), string.format("RPRO|%s|%s", target, member.name))
   end
@@ -260,8 +294,8 @@ function Comm.HandleInfo(parts, sender)
   Store.MarkHistoryAdvertised(name, advertisedAt)
 
   if not changes then
-    if Store.ConsumePendingHistorySync(name) and Store.ShouldRequestHistory(member, Utils.Now()) then
-      Comm.QueueHistoryRequest(name)
+    if Store.ConsumePendingHistorySync(name) and Store.ShouldRequestChat(member, Utils.Now()) then
+      Comm.QueueChatRequest(name, Store.GetHistorySyncAt(name))
     end
     if Store.ConsumePendingRosterSync(name) and Store.ShouldRequestRoster(member, Utils.Now()) then
       Comm.QueueRosterRequest(name)
@@ -283,8 +317,8 @@ function Comm.HandleInfo(parts, sender)
     History.Add("guild_changed", name, string.format("%s -> %s", changes.guildName.old or "", changes.guildName.new or ""))
   end
 
-  if Store.ConsumePendingHistorySync(name) and Store.ShouldRequestHistory(member, Utils.Now()) then
-    Comm.QueueHistoryRequest(name)
+  if Store.ConsumePendingHistorySync(name) and Store.ShouldRequestChat(member, Utils.Now()) then
+    Comm.QueueChatRequest(name, Store.GetHistorySyncAt(name))
   end
   if Store.ConsumePendingRosterSync(name) and Store.ShouldRequestRoster(member, Utils.Now()) then
     Comm.QueueRosterRequest(name)
@@ -296,12 +330,35 @@ function Comm.HandleHistoryRequest(parts, sender)
   Comm.SendHistorySince(sender, sinceAt)
 end
 
-function Comm.HandleRosterRequest(_, sender)
-  Comm.SendRosterProfiles(sender)
+function Comm.HandleRosterRequest(parts, sender)
+  local sinceAt = tonumber(parts[3]) or 0
+  Comm.SendRosterProfilesSince(sender, sinceAt)
 end
 
-function Comm.HandleHistorySummary(parts, sender)
-  return
+function Comm.HandleRosterSummary(parts, sender)
+  local name = Utils.NormalizeName(parts[3]) or Utils.NormalizeName(sender)
+  local latestRosterAt = tonumber(parts[4]) or 0
+  if not name or latestRosterAt <= Store.GetLatestRosterUpdatedAt() then
+    return
+  end
+
+  local member = Store.UpsertMember(name, { hasAddon = true })
+  if Store.ShouldRequestRoster(member, Utils.Now()) then
+    Comm.QueueRosterRequest(name)
+  end
+end
+
+function Comm.HandleChatSummary(parts, sender)
+  local name = Utils.NormalizeName(parts[3]) or Utils.NormalizeName(sender)
+  local latestChatAt = tonumber(parts[4]) or 0
+  if not name or latestChatAt <= History.GetLatestChatAt() then
+    return
+  end
+
+  local member = Store.UpsertMember(name, { hasAddon = true })
+  if Store.ShouldRequestChat(member, Utils.Now()) then
+    Comm.QueueChatRequest(name, History.GetLatestChatAt())
+  end
 end
 
 function Comm.HandleHistoryEvent(parts, sender)
@@ -316,11 +373,11 @@ function Comm.HandleHistoryEvent(parts, sender)
 
   local _, added = History.AddImported(entry)
   if added then
-    Store.MarkHistorySynced(sender, entry.at)
+    Store.MarkChatSynced(sender, entry.at)
     return
   end
 
-  Store.MarkHistorySynced(sender, entry.at)
+  Store.MarkChatSynced(sender, entry.at)
 end
 
 function Comm.HandleRosterProfile(parts, sender)
@@ -346,7 +403,7 @@ function Comm.HandleRosterProfile(parts, sender)
     profession2 = Utils.UnescapeField(parts[10]),
     profession1Icon = parts[11],
     profession2Icon = parts[12],
-  }, timestamp > 0 and timestamp or Utils.Now())
+  }, tonumber(parts[14]) or (timestamp > 0 and timestamp or Utils.Now()))
 
   if member then
     member.hasAddon = hasAddon
@@ -392,13 +449,23 @@ function Comm.HandleAddonMessage(prefix, text, _, sender)
     return
   end
 
-  if messageType == "HSUM" then
-    Comm.HandleHistorySummary(parts, senderName)
+  if messageType == "RSUM" then
+    Comm.HandleRosterSummary(parts, senderName)
     return
   end
 
-  if messageType == "HEVT" then
+  if messageType == "CSUM" then
+    Comm.HandleChatSummary(parts, senderName)
+    return
+  end
+
+  if messageType == "HEVT" or messageType == "CMSG" then
     Comm.HandleHistoryEvent(parts, senderName)
+    return
+  end
+
+  if messageType == "CREQ" then
+    Comm.HandleHistoryRequest(parts, senderName)
     return
   end
 

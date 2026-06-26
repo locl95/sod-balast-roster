@@ -68,6 +68,7 @@ function Store.GetMember(name)
     hasAddon = false,
     firstSeenAt = 0,
     lastSeenAt = 0,
+    lastUpdatedAt = 0,
     missingScans = 0,
     lastProfileAt = 0,
     lastWhoProfileAt = 0,
@@ -76,6 +77,8 @@ function Store.GetMember(name)
     lastHistoryAdvertisedAt = 0,
     pendingHistorySync = false,
     pendingRosterSync = false,
+    lastChatRequestedAt = 0,
+    lastChatSyncAt = 0,
     lastRosterRequestedAt = 0,
     lastRosterSyncAt = 0,
     level = 0,
@@ -190,6 +193,9 @@ function Store.SetProfile(name, profile, timestamp)
 
   member.hasAddon = true
   member.lastProfileAt = timestamp
+  if next(changes) ~= nil then
+    member.lastUpdatedAt = timestamp
+  end
 
   return member, changes
 end
@@ -289,6 +295,29 @@ function Store.MarkRosterSynced(name, timestamp)
   end
 end
 
+function Store.ShouldRequestChat(member, timestamp)
+  if not member or not member.hasAddon then
+    return false
+  end
+
+  return timestamp - (member.lastChatRequestedAt or 0) >= ns.Constants.historySyncCooldown
+end
+
+function Store.MarkChatRequested(name, timestamp)
+  local member = Store.GetMember(name)
+  if member then
+    member.lastChatRequestedAt = timestamp
+    member.pendingHistorySync = false
+  end
+end
+
+function Store.MarkChatSynced(name, timestamp)
+  local member = Store.GetMember(name)
+  if member then
+    member.lastChatSyncAt = math.max(member.lastChatSyncAt or 0, timestamp or 0)
+  end
+end
+
 function Store.ShouldRequestWho(member, timestamp)
   if not member or member.hasAddon then
     return false
@@ -378,6 +407,16 @@ function Store.GetUIState()
   return ns.db.ui
 end
 
+function Store.GetLatestRosterUpdatedAt()
+  local latest = 0
+  for _, member in pairs(Store.GetRoster()) do
+    if (member.lastUpdatedAt or 0) > latest then
+      latest = member.lastUpdatedAt or 0
+    end
+  end
+  return latest
+end
+
 function Store.SetUIFlag(key, value)
   ns.db.ui[key] = value
 end
@@ -425,20 +464,21 @@ function Store.GetVisibleRoster()
   return results
 end
 
-function Store.ExportRosterProfiles(limit)
+function Store.ExportRosterProfiles(limit, since)
   local results = {}
   local cutoff = Utils.Now() - ns.Constants.rosterSyncWindow
+  since = tonumber(since) or 0
 
   for _, member in pairs(Store.GetRoster()) do
     local hasKnownProfile = member.hasAddon or (member.level or 0) > 0 or member.classFile ~= "" or member.zone ~= "" or member.guildName ~= "" or member.profession1 ~= "" or member.profession2 ~= ""
     local isRecent = (member.lastSeenAt or 0) >= cutoff or member.isOnlineInChannel
-    if member.name ~= Utils.PlayerName() and hasKnownProfile and isRecent then
+    if member.name ~= Utils.PlayerName() and hasKnownProfile and isRecent and (member.lastUpdatedAt or 0) > since then
       results[#results + 1] = member
     end
   end
 
   table.sort(results, function(left, right)
-    return (left.lastSeenAt or 0) > (right.lastSeenAt or 0)
+    return (left.lastUpdatedAt or 0) > (right.lastUpdatedAt or 0)
   end)
 
   limit = limit or ns.Constants.rosterSyncLimit
@@ -465,4 +505,34 @@ function Store.GetOnlineAddonMembers()
 
   table.sort(names)
   return names
+end
+
+function Store.SelectSyncDonors(maxCount)
+  local donors = {}
+
+  for _, member in pairs(Store.GetRoster()) do
+    if member.isOnlineInChannel and member.hasAddon and member.name ~= Utils.PlayerName() then
+      donors[#donors + 1] = member
+    end
+  end
+
+  table.sort(donors, function(left, right)
+    if (left.lastProfileAt or 0) ~= (right.lastProfileAt or 0) then
+      return (left.lastProfileAt or 0) > (right.lastProfileAt or 0)
+    end
+
+    if (left.lastSeenAt or 0) ~= (right.lastSeenAt or 0) then
+      return (left.lastSeenAt or 0) > (right.lastSeenAt or 0)
+    end
+
+    return left.name < right.name
+  end)
+
+  maxCount = maxCount or ns.Constants.maxPeriodicDonors
+  local results = {}
+  for index = 1, math.min(maxCount, #donors) do
+    results[#results + 1] = donors[index].name
+  end
+
+  return results
 end
