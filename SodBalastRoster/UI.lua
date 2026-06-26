@@ -591,6 +591,7 @@ function UI.Create()
   frame.historyScrollBar:SetMinMaxValues(0, 0)
   frame.historyScrollBar:SetValueStep(1)
   frame.historyScrollBar:SetObeyStepOnDrag(true)
+  frame.historyScrollBar:EnableMouse(false)
   frame.historyScrollBar:SetScript("OnValueChanged", function(self, value)
     if self.updating then
       return
@@ -611,12 +612,14 @@ function UI.Create()
     frame.historyScrollPosition = (frame.historyScrollPosition or 0) + 1
     UI.UpdateHistoryIndicator()
   end)
+  frame.historyScrollBar.ScrollUpButton:EnableMouse(true)
   frame.historyScrollBar.ScrollDownButton:SetScript("OnClick", function()
     local box = frame.historyBox
     box:ScrollDown()
     frame.historyScrollPosition = math.max(0, (frame.historyScrollPosition or 0) - 1)
     UI.UpdateHistoryIndicator()
   end)
+  frame.historyScrollBar.ScrollDownButton:EnableMouse(true)
 
   frame.chatInput = CreateFrame("EditBox", nil, frame, "InputBoxTemplate")
   frame.chatInput:SetSize(780, 20)
