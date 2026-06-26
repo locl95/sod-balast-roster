@@ -75,6 +75,8 @@ function Store.GetMember(name)
     hasAddon = false,
     pendingAddonProbe = false,
     lastAddonProbeAt = 0,
+    pendingJoin = false,
+    joinSeenScans = 0,
     firstSeenAt = 0,
     lastSeenAt = 0,
     lastUpdatedAt = 0,
@@ -133,7 +135,35 @@ function Store.MarkSeenInChannel(name, timestamp)
   member.lastSeenAt = timestamp
   member.missingScans = 0
 
+  if not wasOnline then
+    member.pendingJoin = true
+    member.joinSeenScans = 0
+  end
+
   return member, not wasOnline
+end
+
+function Store.ConfirmPendingJoins(activeNames, threshold)
+  threshold = threshold or 2
+  local changed = {}
+
+  for _, member in pairs(Store.GetRoster()) do
+    if member.pendingJoin then
+      if member.isOnlineInChannel and activeNames[member.name] then
+        member.joinSeenScans = (member.joinSeenScans or 0) + 1
+        if member.joinSeenScans >= threshold then
+          member.pendingJoin = false
+          member.joinSeenScans = 0
+          changed[#changed + 1] = member
+        end
+      else
+        member.pendingJoin = false
+        member.joinSeenScans = 0
+      end
+    end
+  end
+
+  return changed
 end
 
 function Store.MarkAddonProbePending(name, timestamp)
@@ -174,6 +204,8 @@ function Store.MarkOffline(name)
 
   member.isOnlineInChannel = false
   member.missingScans = 0
+  member.pendingJoin = false
+  member.joinSeenScans = 0
   return member, true
 end
 
@@ -186,6 +218,8 @@ function Store.MarkMissingFromChannel(activeNames, threshold)
       if member.missingScans >= threshold then
         member.isOnlineInChannel = false
         member.missingScans = 0
+        member.pendingJoin = false
+        member.joinSeenScans = 0
         changed[#changed + 1] = member
       end
     elseif member.isOnlineInChannel then

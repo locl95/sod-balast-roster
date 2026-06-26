@@ -95,7 +95,6 @@ function Channel.ScanRoster()
       resolvedNames[#resolvedNames + 1] = name
       local member, justJoined = Store.MarkSeenInChannel(name, timestamp)
       if justJoined then
-        History.Add("joined_channel", name)
         Store.MarkHistorySyncPending(name)
         Store.MarkRosterSyncPending(name)
         if member and member.hasAddon then
@@ -127,6 +126,10 @@ function Channel.ScanRoster()
 
   if canMarkMissing then
     Channel.stableScanCount = Channel.stableScanCount + 1
+    local joinedMembers = Store.ConfirmPendingJoins(activeNames, 2)
+    for _, member in ipairs(joinedMembers) do
+      History.Add("joined_channel", member.name)
+    end
   end
 
   local missingThreshold = canMarkMissing and ns.Constants.fullMissingThreshold or ns.Constants.partialMissingThreshold
