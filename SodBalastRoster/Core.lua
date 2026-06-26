@@ -76,13 +76,14 @@ local function runDebug()
     local scanOk, reason = ns.Channel.ScanRoster()
     local status = ns.Channel.DebugStatus()
     local summary = string.format(
-      "debug channelId=%s displayIndex=%s visibleCount=%s memberCount=%s resolvedCount=%s stableScans=%s scanOk=%s reason=%s",
+      "debug channelId=%s displayIndex=%s visibleCount=%s memberCount=%s resolvedCount=%s stableScans=%s bestEffort=%s scanOk=%s reason=%s",
       tostring(status.channelId),
       tostring(status.displayIndex),
       tostring(status.visibleCount),
       tostring(status.lastMemberCount),
       tostring(status.lastResolvedCount),
       tostring(status.stableScanCount),
+      tostring(status.bestEffort),
       tostring(scanOk),
       tostring(reason)
     )
@@ -112,16 +113,23 @@ local function runDebug()
     ns.Utils.Print("local online roster count: " .. tostring(#onlineMembers))
     for _, member in ipairs(onlineMembers) do
       ns.Utils.Print(string.format(
-        "member name=%s addon=%s level=%s class=%s zone=%s guild=%s lastSeen=%s pendingJoin=%s missingScans=%s",
+        "member name=%s addon=%s online=%s level=%s class=%s zone=%s guild=%s lastSeen=%s pendingJoin=%s missingScans=%s lastObserved=%s lastAddonSeen=%s sources=scan:%s chat:%s notice:%s who:%s",
         tostring(member.name),
         tostring(member.hasAddon),
+        tostring(member.isOnlineInChannel),
         tostring(member.level or 0),
         tostring(member.classFile or ""),
         tostring(member.zone or ""),
         tostring(member.guildName or ""),
         tostring(member.lastSeenAt or 0),
         tostring(member.pendingJoin),
-        tostring(member.missingScans or 0)
+        tostring(member.missingScans or 0),
+        tostring(member.lastObservedAt or 0),
+        tostring(member.lastAddonSeenAt or 0),
+        tostring(member.observedByScan),
+        tostring(member.observedByChat),
+        tostring(member.observedByNotice),
+        tostring(member.observedByWho)
       ))
     end
   end)
@@ -225,9 +233,12 @@ Core:SetScript("OnEvent", function(_, event, ...)
 
         if name and name ~= ns.Utils.PlayerName() then
           if text == "JOINED" or text == "YOU_JOINED" or text == "YOU_CHANGED" then
-            local _, justJoined = ns.Store.MarkObservedInChannel(name, ns.Utils.Now())
+            local member, justJoined = ns.Store.MarkObservedByNotice(name, ns.Utils.Now())
             if justJoined then
               ns.History.Add("joined_channel", name)
+            end
+            if member and member.hasAddon then
+              ns.Comm.QueueProfileRequest(name)
             end
           elseif text == "LEFT" or text == "YOU_LEFT" then
             local _, changed = ns.Store.MarkOffline(name)
@@ -247,9 +258,12 @@ Core:SetScript("OnEvent", function(_, event, ...)
   if event == "CHAT_MSG_CHANNEL" then
     local message, sender, _, channelName, _, _, _, _, channelBaseName, _, lineId = ...
     if ns.Utils.IsTargetChannel(channelName, channelBaseName) then
-      local _, justJoined = ns.Store.MarkObservedInChannel(sender, ns.Utils.Now())
+      local member, justJoined = ns.Store.MarkObservedInChannel(sender, ns.Utils.Now())
       if justJoined and ns.Utils.NormalizeName(sender) ~= ns.Utils.PlayerName() then
         ns.History.Add("joined_channel", sender)
+      end
+      if member and member.name ~= ns.Utils.PlayerName() and member.hasAddon then
+        ns.Comm.QueueProfileRequest(member.name)
       end
       ns.History.AddChannelMessage(sender, message, lineId)
       refreshUI()

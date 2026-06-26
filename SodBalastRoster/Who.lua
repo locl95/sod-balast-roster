@@ -56,6 +56,7 @@ local function getWhoInfo(index)
 end
 
 local function applyWhoResult(targetName, guild, level, classFile, zone)
+  Store.MarkObservedByWho(targetName, Utils.Now())
   local _, changes = Store.SetWhoProfile(targetName, {
     level = level,
     classFile = classFile,

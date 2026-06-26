@@ -388,10 +388,33 @@ local function createRow(parent, index)
 
   row:SetScript("OnEnter", function(self)
     self.highlight:Show()
+
+    if not self.member then
+      return
+    end
+
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText(self.member.name or "?")
+    if self.member.hasAddon then
+      GameTooltip:AddLine("Addon peer", 0.6, 1, 0.6)
+      GameTooltip:AddLine("Presence and sync are reliable.", 1, 1, 1)
+    else
+      GameTooltip:AddLine("Observed only", 1, 0.82, 0.4)
+      GameTooltip:AddLine("Presence is best effort for non-addon users.", 1, 1, 1)
+    end
+    GameTooltip:AddLine(string.format("Sources: scan=%s chat=%s notice=%s who=%s addon=%s",
+      tostring(self.member.observedByScan),
+      tostring(self.member.observedByChat),
+      tostring(self.member.observedByNotice),
+      tostring(self.member.observedByWho),
+      tostring(self.member.hasAddon)
+    ), 0.8, 0.8, 0.8)
+    GameTooltip:Show()
   end)
 
   row:SetScript("OnLeave", function(self)
     self.highlight:Hide()
+    GameTooltip:Hide()
   end)
 
   row:SetScript("OnClick", handleRightClick)
@@ -924,10 +947,10 @@ function UI.RefreshRoster()
     end
 
     if channelStatus.lastScanReason == "roster_names_unresolved" then
-      message = message .. "\n\nEl canal parece existir y tener miembros, pero la API no esta resolviendo nombres del roster."
+      message = message .. "\n\nEl roster scan del canal es best effort y Blizzard no esta resolviendo nombres en este momento."
     end
 
-    message = message .. "\n\nPrueba `/sb debug` y pulsa `Refresh` dentro de SODBALAST."
+    message = message .. "\n\nLos usuarios con addon tienen garantia fuerte. Los demas son observed only.\n\nPrueba `/sb debug` y pulsa `Refresh` dentro de SODBALAST."
     frame.emptyState:SetText(message)
   else
     frame.emptyState:Hide()

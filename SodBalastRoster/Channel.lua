@@ -15,20 +15,6 @@ local Channel = {
 }
 ns.Channel = Channel
 
-local function getChannelRosterName(channelIndex, rosterIndex)
-  if C_ChatInfo and C_ChatInfo.GetChannelRosterInfo then
-    local name = C_ChatInfo.GetChannelRosterInfo(channelIndex, rosterIndex)
-    return name
-  end
-
-  if GetChannelRosterInfo then
-    local name = GetChannelRosterInfo(channelIndex, rosterIndex)
-    return name
-  end
-
-  return nil
-end
-
 function Channel.EnsureJoined()
   local channelId = Channel.GetChannelId()
   if channelId and channelId > 0 then
@@ -63,7 +49,6 @@ function Channel.ScanRoster()
   local timestamp = Utils.Now()
   Channel.lastScanAt = timestamp
 
-  local channelId = Channel.GetChannelId()
   local displayIndex = Channel.FindDisplayIndex()
   if not displayIndex then
     Channel.lastScanOk = false
@@ -81,72 +66,17 @@ function Channel.ScanRoster()
   end
 
   local _, _, _, _, memberCount = GetChannelDisplayInfo(displayIndex)
-  local activeNames = {}
-  local resolvedNames = {}
   Channel.lastMemberCount = memberCount or 0
   Channel.lastFallbackPlayer = nil
 
-  for rosterIndex = 1, memberCount or 0 do
-    local name = getChannelRosterName(displayIndex, rosterIndex)
-    name = Utils.NormalizeName(name)
-
-    if name then
-      activeNames[name] = true
-      resolvedNames[#resolvedNames + 1] = name
-      local member, justJoined = Store.MarkSeenInChannel(name, timestamp)
-      if justJoined then
-        Store.MarkHistorySyncPending(name)
-        Store.MarkRosterSyncPending(name)
-        if member and member.hasAddon then
-          Store.MarkAddonProbePending(name, timestamp)
-        end
-      end
-
-      if member and member.name ~= Utils.PlayerName() and (justJoined or Store.ShouldRequestProfile(member, timestamp)) then
-        ns.Comm.QueueProfileRequest(member.name)
-      end
-
-    end
-  end
-
-  Channel.lastResolvedNames = resolvedNames
-  Channel.lastResolvedCount = #resolvedNames
-
-  if Channel.lastResolvedCount == 0 and (memberCount or 0) > 0 then
-    Channel.lastFallbackPlayer = Utils.PlayerName()
-    Channel.lastScanReason = "roster_names_unresolved"
-    Channel.stableScanCount = 0
-  end
-
-  local canMarkMissing = (memberCount or 0) == 0 or Channel.lastResolvedCount == (memberCount or 0)
-  if not canMarkMissing and Channel.lastResolvedCount > 0 then
-    Channel.lastScanReason = "partial_roster_resolved"
-    Channel.stableScanCount = 0
-  end
-
-  if canMarkMissing then
-    Channel.stableScanCount = Channel.stableScanCount + 1
-    local joinedMembers = Store.ConfirmPendingJoins(activeNames, 2)
-    for _, member in ipairs(joinedMembers) do
-      History.Add("joined_channel", member.name)
-    end
-  end
-
-  local missingThreshold = canMarkMissing and ns.Constants.fullMissingThreshold or ns.Constants.partialMissingThreshold
-  local canApplyMissing = (canMarkMissing and Channel.stableScanCount >= 2) or (not canMarkMissing and Channel.lastResolvedCount > 0)
-  if canApplyMissing then
-    local missingMembers = Store.MarkMissingFromChannel(activeNames, missingThreshold)
-    for _, member in ipairs(missingMembers) do
-      History.Add("left_channel", member.name)
-    end
-  end
+  Channel.lastResolvedNames = {}
+  Channel.lastResolvedCount = 0
+  Channel.lastScanReason = memberCount and memberCount > 0 and "roster_best_effort_disabled" or nil
+  Channel.stableScanCount = 0
 
   Store.DowngradeMissingAddonResponses(timestamp)
 
   Channel.lastScanOk = true
-  if Channel.lastScanReason ~= "roster_names_unresolved" and Channel.lastScanReason ~= "partial_roster_resolved" then
-    Channel.lastScanReason = nil
-  end
   return true, nil
 end
 
@@ -167,6 +97,7 @@ function Channel.DebugStatus()
     channelId = channelId,
     displayIndex = displayIndex,
     visibleCount = visibleCount,
+    bestEffort = true,
     lastScanAt = Channel.lastScanAt,
     lastScanOk = Channel.lastScanOk,
     lastScanReason = Channel.lastScanReason,

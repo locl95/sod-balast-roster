@@ -59,6 +59,12 @@ function Store.ResetTransientState()
   for _, member in pairs(Store.GetRoster()) do
     member.isOnlineInChannel = false
     member.missingScans = 0
+    member.pendingJoin = false
+    member.joinSeenScans = 0
+    member.observedByScan = false
+    member.observedByChat = false
+    member.observedByNotice = false
+    member.observedByWho = false
   end
 end
 
@@ -73,6 +79,16 @@ function Store.GetMember(name)
     name = name,
     isOnlineInChannel = false,
     hasAddon = false,
+    observedByScan = false,
+    observedByChat = false,
+    observedByNotice = false,
+    observedByWho = false,
+    lastObservedAt = 0,
+    lastObservedByScanAt = 0,
+    lastObservedByChatAt = 0,
+    lastObservedByNoticeAt = 0,
+    lastObservedByWhoAt = 0,
+    lastAddonSeenAt = 0,
     pendingAddonProbe = false,
     lastAddonProbeAt = 0,
     pendingJoin = false,
@@ -120,20 +136,65 @@ function Store.UpsertMember(name, patch)
   return member
 end
 
-function Store.MarkSeenInChannel(name, timestamp)
-  local member = Store.GetMember(name)
-  if not member then
-    return nil, false
-  end
-
+local function markObserved(member, timestamp, source)
   local wasOnline = member.isOnlineInChannel
+
   if member.firstSeenAt == 0 then
     member.firstSeenAt = timestamp
   end
 
   member.isOnlineInChannel = true
   member.lastSeenAt = timestamp
+  member.lastObservedAt = timestamp
   member.missingScans = 0
+
+  if source == "scan" then
+    member.observedByScan = true
+    member.lastObservedByScanAt = timestamp
+  elseif source == "chat" then
+    member.observedByChat = true
+    member.lastObservedByChatAt = timestamp
+    member.pendingJoin = false
+    member.joinSeenScans = 0
+  elseif source == "notice" then
+    member.observedByNotice = true
+    member.lastObservedByNoticeAt = timestamp
+    member.pendingJoin = false
+    member.joinSeenScans = 0
+  elseif source == "who" then
+    member.observedByWho = true
+    member.lastObservedByWhoAt = timestamp
+  end
+
+  return wasOnline
+end
+
+function Store.MarkAddonSeen(name, timestamp)
+  local member = Store.GetMember(name)
+  if not member then
+    return nil
+  end
+
+  timestamp = timestamp or Utils.Now()
+  if member.firstSeenAt == 0 then
+    member.firstSeenAt = timestamp
+  end
+  member.isOnlineInChannel = true
+  member.lastSeenAt = timestamp
+  member.lastObservedAt = timestamp
+  member.hasAddon = true
+  member.pendingAddonProbe = false
+  member.lastAddonSeenAt = timestamp
+  return member
+end
+
+function Store.MarkSeenInChannel(name, timestamp)
+  local member = Store.GetMember(name)
+  if not member then
+    return nil, false
+  end
+
+  local wasOnline = markObserved(member, timestamp, "scan")
 
   if not wasOnline then
     member.pendingJoin = true
@@ -149,17 +210,28 @@ function Store.MarkObservedInChannel(name, timestamp)
     return nil, false
   end
 
-  local wasOnline = member.isOnlineInChannel
-  if member.firstSeenAt == 0 then
-    member.firstSeenAt = timestamp
+  local wasOnline = markObserved(member, timestamp, "chat")
+
+  return member, not wasOnline
+end
+
+function Store.MarkObservedByNotice(name, timestamp)
+  local member = Store.GetMember(name)
+  if not member then
+    return nil, false
   end
 
-  member.isOnlineInChannel = true
-  member.lastSeenAt = timestamp
-  member.missingScans = 0
-  member.pendingJoin = false
-  member.joinSeenScans = 0
+  local wasOnline = markObserved(member, timestamp, "notice")
+  return member, not wasOnline
+end
 
+function Store.MarkObservedByWho(name, timestamp)
+  local member = Store.GetMember(name)
+  if not member then
+    return nil, false
+  end
+
+  local wasOnline = markObserved(member, timestamp, "who")
   return member, not wasOnline
 end
 
@@ -226,6 +298,10 @@ function Store.MarkOffline(name)
   member.missingScans = 0
   member.pendingJoin = false
   member.joinSeenScans = 0
+  member.observedByScan = false
+  member.observedByChat = false
+  member.observedByNotice = false
+  member.observedByWho = false
   return member, true
 end
 
@@ -286,6 +362,7 @@ function Store.SetProfile(name, profile, timestamp)
 
   member.hasAddon = true
   member.pendingAddonProbe = false
+  member.lastAddonSeenAt = timestamp
   member.lastProfileAt = timestamp
   if next(changes) ~= nil then
     member.lastUpdatedAt = timestamp
@@ -325,6 +402,8 @@ function Store.SetWhoProfile(name, profile, timestamp)
   apply("zone", profile.zone)
   apply("guildName", profile.guildName)
 
+  member.observedByWho = true
+  member.lastObservedByWhoAt = timestamp
   member.lastWhoProfileAt = timestamp
 
   return member, changes

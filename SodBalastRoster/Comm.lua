@@ -106,6 +106,15 @@ function Comm.QueueProfileRequest(name)
   queueMessage(name, string.format("REQ;%s", ns.Constants.protocolVersion), "REQ|" .. name)
 end
 
+function Comm.QueueHello(name)
+  name = Utils.NormalizeName(name)
+  if not name or name == Utils.PlayerName() then
+    return
+  end
+
+  queueMessage(name, string.format("HELLO;%s;%s", ns.Constants.protocolVersion, Utils.PlayerName() or ""), "HELLO|" .. name)
+end
+
 function Comm.QueueHistoryRequest(name)
   name = Utils.NormalizeName(name)
   if not name or name == Utils.PlayerName() then
@@ -180,6 +189,7 @@ end
 function Comm.SendRosterSummaries(maxDonors)
   local donors = Store.SelectSyncDonors(maxDonors or ns.Constants.maxPeriodicDonors)
   for _, donor in ipairs(donors) do
+    Comm.QueueHello(donor)
     Comm.SendRosterSummary(donor)
   end
 end
@@ -187,6 +197,7 @@ end
 function Comm.SendChatSummaries(maxDonors)
   local donors = Store.SelectSyncDonors(maxDonors or ns.Constants.maxPeriodicDonors)
   for _, donor in ipairs(donors) do
+    Comm.QueueHello(donor)
     Comm.SendChatSummary(donor)
   end
 end
@@ -422,7 +433,7 @@ function Comm.HandleAddonMessage(prefix, text, _, sender)
     return
   end
 
-  Store.UpsertMember(senderName, { hasAddon = true, pendingAddonProbe = false })
+  Store.MarkAddonSeen(senderName, Utils.Now())
 
   local parts = Utils.SplitMessage(text, ";")
   local messageType = parts[1]
@@ -432,6 +443,11 @@ function Comm.HandleAddonMessage(prefix, text, _, sender)
   end
 
   if messageType == "REQ" then
+    Comm.SendInfo(senderName)
+    return
+  end
+
+  if messageType == "HELLO" then
     Comm.SendInfo(senderName)
     return
   end
