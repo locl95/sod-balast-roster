@@ -781,3 +781,37 @@ function Store.SelectSyncDonors(maxCount)
 
   return results
 end
+
+function Store.SelectBootstrapDonors(maxCount)
+  local donors = {}
+
+  for _, member in pairs(Store.GetRoster()) do
+    if member.hasAddon and member.name ~= Utils.PlayerName() then
+      donors[#donors + 1] = member
+    end
+  end
+
+  table.sort(donors, function(left, right)
+    if left.isOnlineInChannel ~= right.isOnlineInChannel then
+      return left.isOnlineInChannel
+    end
+
+    if (left.lastAddonSeenAt or 0) ~= (right.lastAddonSeenAt or 0) then
+      return (left.lastAddonSeenAt or 0) > (right.lastAddonSeenAt or 0)
+    end
+
+    if (left.lastSeenAt or 0) ~= (right.lastSeenAt or 0) then
+      return (left.lastSeenAt or 0) > (right.lastSeenAt or 0)
+    end
+
+    return left.name < right.name
+  end)
+
+  maxCount = maxCount or ns.Constants.maxBootstrapDonors
+  local results = {}
+  for index = 1, math.min(maxCount, #donors) do
+    results[#results + 1] = donors[index].name
+  end
+
+  return results
+end

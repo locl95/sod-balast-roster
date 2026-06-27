@@ -36,8 +36,12 @@ local function scheduleRescanBurst()
 end
 
 local function requestBootstrapSync()
-  ns.Comm.SendRosterSummaries(ns.Constants.maxBootstrapDonors)
-  ns.Comm.SendChatSummaries(ns.Constants.maxBootstrapDonors)
+  local donors = ns.Store.SelectBootstrapDonors(ns.Constants.maxBootstrapDonors)
+  for _, donor in ipairs(donors) do
+    ns.Comm.QueueHello(donor, "bootstrap")
+    ns.Comm.SendRosterSummary(donor)
+    ns.Comm.SendChatSummary(donor)
+  end
 end
 
 local function getNoticeCandidateNames(playerName, playerName2)
@@ -171,11 +175,12 @@ local function printCommDebugLogs(limit)
   for index = startIndex, count do
     local entry = logs[index]
     ns.Utils.Print(string.format(
-      "[%s] %s %s %s",
+      "[%s] %s %s %s%s",
       date("%H:%M:%S", entry.at or ns.Utils.Now()),
       tostring(entry.direction or "?"),
       tostring(entry.peer or "?"),
-      tostring(entry.payload or "")
+      tostring(entry.payload or ""),
+      entry.context and entry.context ~= "" and string.format(" [%s]", entry.context) or ""
     ))
   end
 end

@@ -24,8 +24,8 @@ function Comm.RegisterPrefix()
   end
 end
 
-local function sendAddonWhisper(payload, target)
-  logCommTraffic("OUT", target, payload)
+local function sendAddonWhisper(payload, target, context)
+  logCommTraffic("OUT", target, payload, context)
   if C_ChatInfo and C_ChatInfo.SendAddonMessage then
     C_ChatInfo.SendAddonMessage(ns.Constants.addonPrefix, payload, "WHISPER", target)
     return
@@ -36,7 +36,7 @@ local function sendAddonWhisper(payload, target)
   end
 end
 
-logCommTraffic = function(direction, peer, payload)
+logCommTraffic = function(direction, peer, payload, context)
   if not Store.IsCommDebugEnabled() then
     return
   end
@@ -46,10 +46,11 @@ logCommTraffic = function(direction, peer, payload)
     direction = direction,
     peer = Utils.NormalizeName(peer) or tostring(peer or ""),
     payload = tostring(payload or ""),
+    context = tostring(context or ""),
   })
 end
 
-local function queueMessage(target, payload, key)
+local function queueMessage(target, payload, key, context)
   target = Utils.NormalizeName(target)
   if not target or not payload then
     return
@@ -65,6 +66,7 @@ local function queueMessage(target, payload, key)
     target = target,
     payload = payload,
     key = key,
+    context = context,
   }
 end
 
@@ -122,13 +124,13 @@ function Comm.QueueProfileRequest(name)
   queueMessage(name, string.format("REQ;%s", ns.Constants.protocolVersion), "REQ|" .. name)
 end
 
-function Comm.QueueHello(name)
+function Comm.QueueHello(name, context)
   name = Utils.NormalizeName(name)
   if not name or name == Utils.PlayerName() then
     return
   end
 
-  queueMessage(name, string.format("HELLO;%s;%s", ns.Constants.protocolVersion, Utils.PlayerName() or ""), "HELLO|" .. name)
+  queueMessage(name, string.format("HELLO;%s;%s", ns.Constants.protocolVersion, Utils.PlayerName() or ""), "HELLO|" .. name, context)
 end
 
 function Comm.ProbeObservedPeer(name, timestamp)
@@ -313,7 +315,7 @@ function Comm.FlushQueue()
   local item = table.remove(Comm.queue, 1)
   Comm.queued[item.key] = nil
   Comm.lastSendAt = now
-  sendAddonWhisper(item.payload, item.target)
+  sendAddonWhisper(item.payload, item.target, item.context)
 end
 
 function Comm.HandleInfo(parts, sender)
@@ -444,14 +446,27 @@ function Comm.HandleChatSummary(parts, sender)
 end
 
 function Comm.HandleHistoryEvent(parts, sender)
-  local entry = {
-    id = Utils.UnescapeField(parts[3]),
-    at = tonumber(parts[4]) or 0,
-    source = Utils.UnescapeField(parts[5]),
-    name = Utils.UnescapeField(parts[6]),
-    type = Utils.UnescapeField(parts[7]),
-    details = Utils.UnescapeField(parts[8]),
-  }
+  local entry
+
+  if parts[1] == "CMSG" then
+    entry = {
+      id = Utils.UnescapeField(parts[3]),
+      at = tonumber(parts[4]) or 0,
+      source = Utils.UnescapeField(parts[5]),
+      name = Utils.UnescapeField(parts[6]),
+      type = "channel_message",
+      details = Utils.UnescapeField(parts[7]),
+    }
+  else
+    entry = {
+      id = Utils.UnescapeField(parts[3]),
+      at = tonumber(parts[4]) or 0,
+      source = Utils.UnescapeField(parts[5]),
+      name = Utils.UnescapeField(parts[6]),
+      type = Utils.UnescapeField(parts[7]),
+      details = Utils.UnescapeField(parts[8]),
+    }
+  end
 
   local _, added = History.AddImported(entry)
   if added then

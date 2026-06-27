@@ -67,3 +67,41 @@ test("Comm.ProbeOnlineAddonMembers queues hello for stale addon peer", function(
   t.assertEqual(comm.queue[1].payload, "HELLO;4;Tester")
   t.assertTrue(member.pendingAddonProbe)
 end)
+
+test("Comm.HandleHistoryEvent imports CMSG as channel_message", function(t)
+  local ctx = t.newContext()
+
+  ctx.ns.Comm.HandleHistoryEvent({
+    "CMSG",
+    "4",
+    "chan:500",
+    "1500",
+    "Remote",
+    "Alice",
+    "hello from peer",
+  }, "Remote")
+
+  local entries = ctx.ns.History.GetEntries()
+  t.assertEqual(#entries, 1)
+  t.assertEqual(entries[1].id, "chan:500")
+  t.assertEqual(entries[1].type, "channel_message")
+  t.assertEqual(entries[1].name, "Alice")
+  t.assertEqual(entries[1].source, "Remote")
+  t.assertEqual(entries[1].details, "hello from peer")
+end)
+
+test("Comm.HandleHistoryEvent updates sender chat sync for CMSG", function(t)
+  local ctx = t.newContext()
+
+  ctx.ns.Comm.HandleHistoryEvent({
+    "CMSG",
+    "4",
+    "chan:501",
+    "1600",
+    "Remote",
+    "Bob",
+    "ping",
+  }, "Remote")
+
+  t.assertEqual(ctx.ns.Store.GetChatSyncAt("Remote"), 1600)
+end)
