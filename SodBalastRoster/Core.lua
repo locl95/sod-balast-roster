@@ -161,6 +161,141 @@ local function runDebug()
   refreshUI()
 end
 
+local function printCommDebugLogs(limit)
+  local logs = ns.Store.GetCommDebugLogs()
+  local count = #logs
+  limit = math.max(1, tonumber(limit) or 20)
+
+  ns.Utils.Print(string.format("comm debug logs: showing %d of %d", math.min(limit, count), count))
+  local startIndex = math.max(1, count - limit + 1)
+  for index = startIndex, count do
+    local entry = logs[index]
+    ns.Utils.Print(string.format(
+      "[%s] %s %s %s",
+      date("%H:%M:%S", entry.at or ns.Utils.Now()),
+      tostring(entry.direction or "?"),
+      tostring(entry.peer or "?"),
+      tostring(entry.payload or "")
+    ))
+  end
+end
+
+local function printNoticeDebugLogs(limit)
+  local logs = ns.Store.GetNoticeDebugLogs()
+  local count = #logs
+  limit = math.max(1, tonumber(limit) or 20)
+
+  ns.Utils.Print(string.format("notice debug logs: showing %d of %d", math.min(limit, count), count))
+  local startIndex = math.max(1, count - limit + 1)
+  for index = startIndex, count do
+    local entry = logs[index]
+    ns.Utils.Print(string.format(
+      "[%s] %s text=%s player=%s player2=%s channel=%s base=%s raw=%s",
+      date("%H:%M:%S", entry.at or ns.Utils.Now()),
+      tostring(entry.event or "?"),
+      tostring(entry.text or ""),
+      tostring(entry.playerName or ""),
+      tostring(entry.playerName2 or ""),
+      tostring(entry.channelName or ""),
+      tostring(entry.channelBaseName or ""),
+      tostring(entry.raw or "")
+    ))
+  end
+end
+
+local function handleDebugCommCommand(argument)
+  argument = ns.Utils.Trim(argument or "")
+
+  if argument == "on" then
+    ns.Store.SetCommDebugEnabled(true)
+    ns.Utils.Print("comm debug enabled")
+    return
+  end
+
+  if argument == "off" then
+    ns.Store.SetCommDebugEnabled(false)
+    ns.Utils.Print("comm debug disabled")
+    return
+  end
+
+  if argument == "clear" then
+    ns.Store.ClearCommDebugLogs()
+    ns.Utils.Print("comm debug logs cleared")
+    return
+  end
+
+  if argument == "" or argument == "show" then
+    printCommDebugLogs(20)
+    return
+  end
+
+  local showLimit = string.match(argument, "^show%s+(%d+)$")
+  if showLimit then
+    printCommDebugLogs(tonumber(showLimit))
+    return
+  end
+
+  ns.Utils.Print("usage: /sb debug comm on|off|show [n]|clear")
+end
+
+local function handleDebugNoticeCommand(argument)
+  argument = ns.Utils.Trim(argument or "")
+
+  if argument == "on" then
+    ns.Store.SetNoticeDebugEnabled(true)
+    ns.Utils.Print("notice debug enabled")
+    return
+  end
+
+  if argument == "off" then
+    ns.Store.SetNoticeDebugEnabled(false)
+    ns.Utils.Print("notice debug disabled")
+    return
+  end
+
+  if argument == "clear" then
+    ns.Store.ClearNoticeDebugLogs()
+    ns.Utils.Print("notice debug logs cleared")
+    return
+  end
+
+  if argument == "" or argument == "show" then
+    printNoticeDebugLogs(20)
+    return
+  end
+
+  local showLimit = string.match(argument, "^show%s+(%d+)$")
+  if showLimit then
+    printNoticeDebugLogs(tonumber(showLimit))
+    return
+  end
+
+  ns.Utils.Print("usage: /sb debug notice on|off|show [n]|clear")
+end
+
+local function logNoticeDebug(eventName, text, playerName, channelName, playerName2, channelBaseName)
+  if not ns.Store.IsNoticeDebugEnabled() then
+    return
+  end
+
+  ns.Store.AppendNoticeDebugLog({
+    at = ns.Utils.Now(),
+    event = eventName,
+    text = text,
+    playerName = playerName,
+    playerName2 = playerName2,
+    channelName = channelName,
+    channelBaseName = channelBaseName,
+    raw = table.concat({
+      tostring(text or ""),
+      tostring(playerName or ""),
+      tostring(channelName or ""),
+      tostring(playerName2 or ""),
+      tostring(channelBaseName or ""),
+    }, " | "),
+  })
+end
+
 Core.RunDebug = runDebug
 
 local function handleSlashCommand(message)
@@ -169,6 +304,19 @@ local function handleSlashCommand(message)
   if message == "debug" then
     runDebug()
     return
+  end
+
+  local debugCommand = string.match(message, "^debug%s+(.+)$")
+  if debugCommand then
+    local subcommand, argument = string.match(debugCommand, "^(%S+)%s*(.-)$")
+    if subcommand == "comm" then
+      handleDebugCommCommand(argument)
+      return
+    end
+    if subcommand == "notice" then
+      handleDebugNoticeCommand(argument)
+      return
+    end
   end
 
   local frame = safeCreateUI()
@@ -250,6 +398,7 @@ Core:SetScript("OnEvent", function(_, event, ...)
   if event == "CHANNEL_UI_UPDATE" or event == "CHAT_MSG_CHANNEL_NOTICE" or event == "CHAT_MSG_CHANNEL_NOTICE_USER" then
     if event == "CHAT_MSG_CHANNEL_NOTICE" or event == "CHAT_MSG_CHANNEL_NOTICE_USER" then
       local text, playerName, _, channelName, playerName2, _, _, _, channelBaseName = ...
+      logNoticeDebug(event, text, playerName, channelName, playerName2, channelBaseName)
       if ns.Utils.IsTargetChannel(channelName, channelBaseName) and ns.Utils.IsJoinOrLeaveNotice(text) then
         local now = ns.Utils.Now()
         local names = getNoticeCandidateNames(playerName, playerName2)

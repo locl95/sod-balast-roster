@@ -11,6 +11,8 @@ local Comm = {
 }
 ns.Comm = Comm
 
+local logCommTraffic
+
 function Comm.RegisterPrefix()
   if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then
     C_ChatInfo.RegisterAddonMessagePrefix(ns.Constants.addonPrefix)
@@ -23,6 +25,7 @@ function Comm.RegisterPrefix()
 end
 
 local function sendAddonWhisper(payload, target)
+  logCommTraffic("OUT", target, payload)
   if C_ChatInfo and C_ChatInfo.SendAddonMessage then
     C_ChatInfo.SendAddonMessage(ns.Constants.addonPrefix, payload, "WHISPER", target)
     return
@@ -31,6 +34,19 @@ local function sendAddonWhisper(payload, target)
   if SendAddonMessage then
     SendAddonMessage(ns.Constants.addonPrefix, payload, "WHISPER", target)
   end
+end
+
+logCommTraffic = function(direction, peer, payload)
+  if not Store.IsCommDebugEnabled() then
+    return
+  end
+
+  Store.AppendCommDebugLog({
+    at = Utils.Now(),
+    direction = direction,
+    peer = Utils.NormalizeName(peer) or tostring(peer or ""),
+    payload = tostring(payload or ""),
+  })
 end
 
 local function queueMessage(target, payload, key)
@@ -487,6 +503,8 @@ function Comm.HandleAddonMessage(prefix, text, _, sender)
   if senderName == Utils.PlayerName() then
     return
   end
+
+  logCommTraffic("IN", senderName, text)
 
   Store.MarkAddonSeen(senderName, Utils.Now())
 

@@ -31,6 +31,12 @@ local defaults = {
     x = -220,
     y = -120,
   },
+  debug = {
+    commEnabled = false,
+    commLogs = {},
+    noticeEnabled = false,
+    noticeLogs = {},
+  },
 }
 
 local function copyDefaults(target, source)
@@ -561,6 +567,76 @@ end
 
 function Store.GetChatAlertState()
   return Store.GetDB().chatAlert
+end
+
+function Store.GetDebugState()
+  return Store.GetDB().debug
+end
+
+function Store.IsCommDebugEnabled()
+  return Store.GetDebugState().commEnabled and true or false
+end
+
+function Store.SetCommDebugEnabled(enabled)
+  Store.GetDebugState().commEnabled = enabled and true or false
+end
+
+function Store.GetCommDebugLogs()
+  return Store.GetDebugState().commLogs
+end
+
+function Store.ClearCommDebugLogs()
+  Store.GetDebugState().commLogs = {}
+end
+
+function Store.AppendCommDebugLog(entry)
+  local logs = Store.GetCommDebugLogs()
+  logs[#logs + 1] = entry
+
+  local limit = 200
+  if #logs <= limit then
+    return
+  end
+
+  local trimmed = {}
+  local startIndex = #logs - limit + 1
+  for index = startIndex, #logs do
+    trimmed[#trimmed + 1] = logs[index]
+  end
+  Store.GetDebugState().commLogs = trimmed
+end
+
+function Store.IsNoticeDebugEnabled()
+  return Store.GetDebugState().noticeEnabled and true or false
+end
+
+function Store.SetNoticeDebugEnabled(enabled)
+  Store.GetDebugState().noticeEnabled = enabled and true or false
+end
+
+function Store.GetNoticeDebugLogs()
+  return Store.GetDebugState().noticeLogs
+end
+
+function Store.ClearNoticeDebugLogs()
+  Store.GetDebugState().noticeLogs = {}
+end
+
+function Store.AppendNoticeDebugLog(entry)
+  local logs = Store.GetNoticeDebugLogs()
+  logs[#logs + 1] = entry
+
+  local limit = 200
+  if #logs <= limit then
+    return
+  end
+
+  local trimmed = {}
+  local startIndex = #logs - limit + 1
+  for index = startIndex, #logs do
+    trimmed[#trimmed + 1] = logs[index]
+  end
+  Store.GetDebugState().noticeLogs = trimmed
 end
 
 function Store.GetLatestRosterUpdatedAt()
