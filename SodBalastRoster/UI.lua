@@ -102,6 +102,25 @@ local function hideContextMenu(deferred)
   end)
 end
 
+local function ensureContextMenuDismissOverlay()
+  if UI.contextMenuDismissOverlay then
+    return UI.contextMenuDismissOverlay
+  end
+
+  local overlay = CreateFrame("Button", nil, UIParent)
+  overlay:SetAllPoints(UIParent)
+  overlay:SetFrameStrata("FULLSCREEN_DIALOG")
+  overlay:EnableMouse(true)
+  overlay:RegisterForClicks("AnyUp")
+  overlay:SetScript("OnClick", function()
+    hideContextMenu(true)
+  end)
+  overlay:Hide()
+
+  UI.contextMenuDismissOverlay = overlay
+  return overlay
+end
+
 local function runMenuAction(action, member)
   if not member or not member.name then
     return
@@ -186,37 +205,23 @@ local function ensureContextMenu()
     end
   end)
   menu:SetScript("OnShow", function(self)
+    local overlay = ensureContextMenuDismissOverlay()
+    overlay:SetFrameLevel(math.max(0, self:GetFrameLevel() - 1))
+    overlay:Show()
     self:EnableKeyboard(true)
     self:SetPropagateKeyboardInput(false)
   end)
   menu:SetScript("OnHide", function(self)
     UI.contextMenuHidePending = nil
+    if UI.contextMenuDismissOverlay then
+      UI.contextMenuDismissOverlay:Hide()
+    end
     self.member = nil
     if self.SetPropagateKeyboardInput then
       self:SetPropagateKeyboardInput(true)
     end
     self:EnableKeyboard(false)
   end)
-
-  if not UI.contextMenuDismissHooked then
-    UIParent:HookScript("OnMouseUp", function(_, button)
-      if button ~= "LeftButton" and button ~= "RightButton" then
-        return
-      end
-
-      if not UI.contextMenu or not UI.contextMenu:IsShown() then
-        return
-      end
-
-      local focus = GetMouseFocus and GetMouseFocus() or nil
-      if isDescendantFrame(focus, UI.contextMenu) then
-        return
-      end
-
-      hideContextMenu(true)
-    end)
-    UI.contextMenuDismissHooked = true
-  end
 
   UI.contextMenu = menu
   return menu
@@ -652,26 +657,6 @@ function UI.Create()
   frame:SetScript("OnDragStop", function(self)
     self:StopMovingOrSizing()
     Store.SaveFramePosition(self)
-  end)
-  frame:SetScript("OnMouseUp", function(self, button)
-    if button ~= "LeftButton" and button ~= "RightButton" then
-      return
-    end
-
-    if not UI.contextMenu or not UI.contextMenu:IsShown() then
-      return
-    end
-
-    local focus = GetMouseFocus and GetMouseFocus() or nil
-    if isDescendantFrame(focus, UI.contextMenu) then
-      return
-    end
-
-    if isRosterRowFrame(focus) then
-      return
-    end
-
-    hideContextMenu(true)
   end)
   frame:Hide()
   registerSpecialFrame("SodBalastRosterFrame")
