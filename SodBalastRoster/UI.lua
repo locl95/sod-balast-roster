@@ -79,6 +79,29 @@ local HISTORY_LABELS = {
 
 local CLASS_ICON_TEXTURE = "Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES"
 
+local function hideContextMenu(deferred)
+  if not UI.contextMenu then
+    return
+  end
+
+  if not deferred then
+    UI.contextMenu:Hide()
+    return
+  end
+
+  if UI.contextMenuHidePending then
+    return
+  end
+
+  UI.contextMenuHidePending = true
+  C_Timer.After(0, function()
+    UI.contextMenuHidePending = nil
+    if UI.contextMenu and UI.contextMenu:IsShown() then
+      UI.contextMenu:Hide()
+    end
+  end)
+end
+
 local function runMenuAction(action, member)
   if not member or not member.name then
     return
@@ -98,9 +121,7 @@ local function runMenuAction(action, member)
     end
   end
 
-  if UI.contextMenu then
-    UI.contextMenu:Hide()
-  end
+  hideContextMenu(true)
 end
 
 local function ensureContextMenu()
@@ -154,9 +175,9 @@ local function ensureContextMenu()
     menu.buttons[#menu.buttons + 1] = button
   end
 
-  menu:SetScript("OnMouseDown", function(_, button)
+  menu:SetScript("OnMouseUp", function(_, button)
     if button == "RightButton" then
-      menu:Hide()
+      hideContextMenu(true)
     end
   end)
   menu:SetScript("OnKeyDown", function(self, key)
@@ -169,6 +190,7 @@ local function ensureContextMenu()
     self:SetPropagateKeyboardInput(false)
   end)
   menu:SetScript("OnHide", function(self)
+    UI.contextMenuHidePending = nil
     self.member = nil
     if self.SetPropagateKeyboardInput then
       self:SetPropagateKeyboardInput(true)
@@ -191,7 +213,7 @@ local function ensureContextMenu()
         return
       end
 
-      UI.contextMenu:Hide()
+      hideContextMenu(true)
     end)
     UI.contextMenuDismissHooked = true
   end
@@ -649,7 +671,7 @@ function UI.Create()
       return
     end
 
-    UI.contextMenu:Hide()
+    hideContextMenu(true)
   end)
   frame:Hide()
   registerSpecialFrame("SodBalastRosterFrame")
