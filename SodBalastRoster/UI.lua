@@ -177,7 +177,7 @@ local function ensureContextMenu()
   end)
 
   if not UI.contextMenuDismissHooked then
-    UIParent:HookScript("OnMouseDown", function(_, button)
+    UIParent:HookScript("OnMouseUp", function(_, button)
       if button ~= "LeftButton" and button ~= "RightButton" then
         return
       end
@@ -631,7 +631,7 @@ function UI.Create()
     self:StopMovingOrSizing()
     Store.SaveFramePosition(self)
   end)
-  frame:SetScript("OnMouseDown", function(self, button)
+  frame:SetScript("OnMouseUp", function(self, button)
     if button ~= "LeftButton" and button ~= "RightButton" then
       return
     end
