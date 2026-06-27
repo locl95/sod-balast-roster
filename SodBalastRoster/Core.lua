@@ -241,10 +241,21 @@ Core:SetScript("OnEvent", function(_, event, ...)
               ns.Comm.QueueProfileRequest(name)
             end
           elseif text == "LEFT" or text == "YOU_LEFT" then
-            local _, changed = ns.Store.MarkOffline(name)
-            if changed then
-              ns.History.Add("left_channel", name)
+            local now = ns.Utils.Now()
+            local member = ns.Store.GetMember(name)
+            if member then
+              if now > (member.lastSeenAt or 0) then
+                member.lastSeenAt = now
+              end
+              if now > (member.lastObservedAt or 0) then
+                member.lastObservedAt = now
+              end
+              if now > (member.lastObservedByNoticeAt or 0) then
+                member.lastObservedByNoticeAt = now
+              end
             end
+            ns.Store.MarkOffline(name)
+            ns.History.Add("left_channel", name)
           end
         end
       end

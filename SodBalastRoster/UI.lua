@@ -113,7 +113,7 @@ local function ensureContextMenu()
   menu:SetToplevel(true)
   menu:SetClampedToScreen(true)
   menu:EnableMouse(true)
-  menu:EnableKeyboard(true)
+  menu:EnableKeyboard(false)
   menu:SetSize(170, 132)
 
   if menu.SetBackdrop then
@@ -165,7 +165,15 @@ local function ensureContextMenu()
     end
   end)
   menu:SetScript("OnShow", function(self)
+    self:EnableKeyboard(true)
     self:SetPropagateKeyboardInput(false)
+  end)
+  menu:SetScript("OnHide", function(self)
+    self.member = nil
+    if self.SetPropagateKeyboardInput then
+      self:SetPropagateKeyboardInput(true)
+    end
+    self:EnableKeyboard(false)
   end)
 
   if not UI.contextMenuDismissHooked then
