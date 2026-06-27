@@ -447,8 +447,7 @@ local function createRow(parent, index)
       GameTooltip:AddLine("Observed only", 1, 0.82, 0.4)
       GameTooltip:AddLine("Presence is best effort for non-addon users.", 1, 1, 1)
     end
-    GameTooltip:AddLine(string.format("Sources: scan=%s chat=%s notice=%s who=%s addon=%s",
-      tostring(self.member.observedByScan),
+    GameTooltip:AddLine(string.format("Sources: chat=%s notice=%s who=%s addon=%s",
       tostring(self.member.observedByChat),
       tostring(self.member.observedByNotice),
       tostring(self.member.observedByWho),

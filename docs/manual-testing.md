@@ -4,7 +4,7 @@
 
 Validar de forma manual:
 
-1. presencia por canal
+1. presencia de peers con addon por heartbeat y notices
 2. sincronizacion de perfil
 3. reconciliacion de roster
 4. reconciliacion de chat
@@ -53,9 +53,14 @@ Pasos:
 
 Esperado:
 
-- todos los miembros del canal visibles aparecen en el roster
+- jugadores observados por notice, chat o addon aparecen en el roster
 - miembros con addon muestran columna `A = Y`
 - miembros sin addon muestran `A = -`
+
+Nota:
+
+- en SoD no se asume que el roster detallado del canal se pueda resolver por API
+- para usuarios sin addon, la presencia sigue siendo best effort
 
 ## Caso 3. Perfil vivo entre peers con addon
 
@@ -137,7 +142,7 @@ Pasos:
 
 Esperado:
 
-- A marca offline a B razonablemente rapido
+- A marca offline a B razonablemente rapido por `BYE` o por timeout de heartbeat addon
 - si llega `BYE`, mejor aun
 
 ### Cambio de zona/canales
@@ -151,6 +156,19 @@ Esperado:
 
 - no se marca a todo el roster offline en masa
 - no aparecen `left_channel` falsos por refresh transitorio
+
+### Usuario sin addon
+
+Pasos:
+
+1. personaje sin addon entra al canal
+2. hablar por el canal o provocar notice visible
+3. observar el roster
+
+Esperado:
+
+- puede aparecer en roster por chat o notice
+- su presencia puede tardar mas o ser menos fiable que la de peers con addon
 
 ## Caso 7. Chat visible
 
@@ -277,7 +295,21 @@ Esperado:
 - no se percibe spam de full sync continuo
 - el addon converge sin peticiones visibles agresivas
 
-## Caso 14. UI lateral de navegacion
+## Caso 14. Heartbeat addon
+
+Pasos:
+
+1. cliente A y B con addon online
+2. dejar de generar chat o interaccion un rato
+3. cerrar B sin enviar mensajes visibles
+4. observar A
+
+Esperado:
+
+- A mantiene a B online mientras siga habiendo trafico addon o heartbeat respondido
+- si B desaparece, A termina marcandolo offline por timeout addon aunque no llegue `LEFT`
+
+## Caso 15. UI lateral de navegacion
 
 Pasos:
 
@@ -291,7 +323,7 @@ Esperado:
 - tamaño y espaciado correctos
 - cambio de tab funcional
 
-## Caso 15. Menu contextual del roster
+## Caso 16. Menu contextual del roster
 
 Pasos:
 
@@ -303,7 +335,7 @@ Esperado:
 - acciones disponibles segun el estado esperado
 - `Refresh Info` solo para miembros sin addon
 
-## Caso 16. Compatibilidad de versiones
+## Caso 17. Compatibilidad de versiones
 
 Pasos:
 
@@ -319,7 +351,7 @@ Esperado:
 ## Checklist rapido antes de dar por buena una release
 
 1. el addon carga sin error
-2. el roster del canal refleja a los miembros presentes
+2. los peers con addon se detectan y mantienen online por heartbeat/notices
 3. los peers con addon se ven con perfil completo
 4. las profesiones se sincronizan y muestran icono
 5. el `Chat` no duplica mensajes

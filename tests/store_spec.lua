@@ -19,3 +19,35 @@ test("Store.MarkChatSynced keeps chat and legacy history timestamps aligned", fu
   t.assertEqual(member.lastHistorySyncAt, 123)
   t.assertEqual(ctx.ns.Store.GetHistorySyncAt("Remote"), 123)
 end)
+
+test("Store.DowngradeMissingAddonResponses marks addon peer offline after repeated missed probes", function(t)
+  local ctx = t.newContext()
+  local store = ctx.ns.Store
+  local now = 1000
+  local member = store.MarkAddonSeen("Remote", now)
+  member.hasAddon = true
+
+  store.MarkAddonProbePending("Remote", now - 30)
+  local changed = store.DowngradeMissingAddonResponses(now)
+  t.assertEqual(#changed, 0)
+  t.assertEqual(member.missedAddonProbes, 1)
+  t.assertTrue(member.isOnlineInChannel)
+
+  store.MarkAddonProbePending("Remote", now - 30)
+  changed = store.DowngradeMissingAddonResponses(now)
+  t.assertEqual(#changed, 0)
+  t.assertEqual(member.missedAddonProbes, 2)
+  t.assertTrue(member.isOnlineInChannel)
+
+  store.MarkAddonProbePending("Remote", now - 30)
+  changed = store.DowngradeMissingAddonResponses(now)
+  t.assertEqual(#changed, 0)
+  t.assertEqual(member.missedAddonProbes, 3)
+  t.assertTrue(member.isOnlineInChannel)
+
+  store.MarkAddonProbePending("Remote", now - 30)
+  changed = store.DowngradeMissingAddonResponses(now)
+  t.assertEqual(#changed, 1)
+  t.assertFalse(member.isOnlineInChannel)
+  t.assertEqual(changed[1].name, "Remote")
+end)

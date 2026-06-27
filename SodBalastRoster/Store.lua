@@ -58,10 +58,6 @@ end
 function Store.ResetTransientState()
   for _, member in pairs(Store.GetRoster()) do
     member.isOnlineInChannel = false
-    member.missingScans = 0
-    member.pendingJoin = false
-    member.joinSeenScans = 0
-    member.observedByScan = false
     member.observedByChat = false
     member.observedByNotice = false
     member.observedByWho = false
@@ -79,24 +75,20 @@ function Store.GetMember(name)
     name = name,
     isOnlineInChannel = false,
     hasAddon = false,
-    observedByScan = false,
     observedByChat = false,
     observedByNotice = false,
     observedByWho = false,
     lastObservedAt = 0,
-    lastObservedByScanAt = 0,
     lastObservedByChatAt = 0,
     lastObservedByNoticeAt = 0,
     lastObservedByWhoAt = 0,
     lastAddonSeenAt = 0,
     pendingAddonProbe = false,
     lastAddonProbeAt = 0,
-    pendingJoin = false,
-    joinSeenScans = 0,
+    missedAddonProbes = 0,
     firstSeenAt = 0,
     lastSeenAt = 0,
     lastUpdatedAt = 0,
-    missingScans = 0,
     lastProfileAt = 0,
     lastWhoProfileAt = 0,
     lastHistorySyncAt = 0,
@@ -153,21 +145,13 @@ local function markObserved(member, timestamp, source)
   member.isOnlineInChannel = true
   member.lastSeenAt = timestamp
   member.lastObservedAt = timestamp
-  member.missingScans = 0
 
-  if source == "scan" then
-    member.observedByScan = true
-    member.lastObservedByScanAt = timestamp
-  elseif source == "chat" then
+  if source == "chat" then
     member.observedByChat = true
     member.lastObservedByChatAt = timestamp
-    member.pendingJoin = false
-    member.joinSeenScans = 0
   elseif source == "notice" then
     member.observedByNotice = true
     member.lastObservedByNoticeAt = timestamp
-    member.pendingJoin = false
-    member.joinSeenScans = 0
   elseif source == "who" then
     member.observedByWho = true
     member.lastObservedByWhoAt = timestamp
@@ -192,23 +176,8 @@ function Store.MarkAddonSeen(name, timestamp)
   member.hasAddon = true
   member.pendingAddonProbe = false
   member.lastAddonSeenAt = timestamp
+  member.missedAddonProbes = 0
   return member
-end
-
-function Store.MarkSeenInChannel(name, timestamp)
-  local member = Store.GetMember(name)
-  if not member then
-    return nil, false
-  end
-
-  local wasOnline = markObserved(member, timestamp, "scan")
-
-  if not wasOnline then
-    member.pendingJoin = true
-    member.joinSeenScans = 0
-  end
-
-  return member, not wasOnline
 end
 
 function Store.MarkObservedInChannel(name, timestamp)
@@ -257,30 +226,8 @@ function Store.MarkSelfInChannel(timestamp)
   member.hasAddon = true
   member.lastAddonSeenAt = math.max(member.lastAddonSeenAt or 0, timestamp)
   member.pendingAddonProbe = false
+  member.missedAddonProbes = 0
   return member
-end
-
-function Store.ConfirmPendingJoins(activeNames, threshold)
-  threshold = threshold or 2
-  local changed = {}
-
-  for _, member in pairs(Store.GetRoster()) do
-    if member.pendingJoin then
-      if member.isOnlineInChannel and activeNames[member.name] then
-        member.joinSeenScans = (member.joinSeenScans or 0) + 1
-        if member.joinSeenScans >= threshold then
-          member.pendingJoin = false
-          member.joinSeenScans = 0
-          changed[#changed + 1] = member
-        end
-      else
-        member.pendingJoin = false
-        member.joinSeenScans = 0
-      end
-    end
-  end
-
-  return changed
 end
 
 function Store.MarkAddonProbePending(name, timestamp)
@@ -295,18 +242,25 @@ function Store.ClearAddonProbe(name)
   local member = Store.GetMember(name)
   if member then
     member.pendingAddonProbe = false
+    member.missedAddonProbes = 0
   end
 end
 
 function Store.DowngradeMissingAddonResponses(timestamp)
   local changed = {}
   local timeout = ns.Constants.addonProbeTimeout or 20
+  local threshold = ns.Constants.partialMissingThreshold or 4
 
   for _, member in pairs(Store.GetRoster()) do
     if member.isOnlineInChannel and member.hasAddon and member.pendingAddonProbe and (timestamp - (member.lastAddonProbeAt or 0)) >= timeout then
-      member.hasAddon = false
       member.pendingAddonProbe = false
-      changed[#changed + 1] = member
+      member.missedAddonProbes = (member.missedAddonProbes or 0) + 1
+      if member.missedAddonProbes >= threshold then
+        local offlineMember, wasChanged = Store.MarkOffline(member.name)
+        if wasChanged and offlineMember then
+          changed[#changed + 1] = offlineMember
+        end
+      end
     end
   end
 
@@ -320,34 +274,12 @@ function Store.MarkOffline(name)
   end
 
   member.isOnlineInChannel = false
-  member.missingScans = 0
-  member.pendingJoin = false
-  member.joinSeenScans = 0
-  member.observedByScan = false
   member.observedByChat = false
   member.observedByNotice = false
   member.observedByWho = false
+  member.pendingAddonProbe = false
+  member.missedAddonProbes = 0
   return member, true
-end
-
-function Store.MarkMissingFromChannel(activeNames, threshold)
-  threshold = threshold or ns.Constants.fullMissingThreshold or 2
-  local changed = {}
-  for _, member in pairs(Store.GetRoster()) do
-    if member.isOnlineInChannel and not activeNames[member.name] then
-      member.missingScans = (member.missingScans or 0) + 1
-      if member.missingScans >= threshold then
-        member.isOnlineInChannel = false
-        member.missingScans = 0
-        member.pendingJoin = false
-        member.joinSeenScans = 0
-        changed[#changed + 1] = member
-      end
-    elseif member.isOnlineInChannel then
-      member.missingScans = 0
-    end
-  end
-  return changed
 end
 
 function Store.SetProfile(name, profile, timestamp)

@@ -48,6 +48,29 @@ local function installGlobals(env)
   _G.GetSkillLineInfo = function()
     return nil
   end
+  _G.JoinPermanentChannel = function(name)
+    env.joinedChannels[#env.joinedChannels + 1] = name
+  end
+  _G.GetChannelName = function(name)
+    if name == env.channel.name then
+      return env.channel.id
+    end
+
+    return 0
+  end
+  _G.GetNumDisplayChannels = function()
+    return env.channel.displayCount
+  end
+  _G.GetChannelDisplayInfo = function(index)
+    if index ~= env.channel.displayIndex then
+      return nil
+    end
+
+    return env.channel.name, false, false, env.channel.id, env.channel.memberCount, true, "CHANNEL_CATEGORY_CUSTOM", 0
+  end
+  _G.SetSelectedDisplayChannel = function(index)
+    env.channel.selectedDisplayIndex = index
+  end
   _G.C_Timer = {
     After = function(_, callback)
       callback()
@@ -93,6 +116,15 @@ function Bootstrap.newContext()
     guildName = "Raiders",
     level = 60,
     sentAddonMessages = {},
+    joinedChannels = {},
+    channel = {
+      id = 1,
+      name = "SODBALAST",
+      displayIndex = 1,
+      displayCount = 1,
+      memberCount = 2,
+      selectedDisplayIndex = nil,
+    },
   }
 
   installGlobals(env)
@@ -103,6 +135,7 @@ function Bootstrap.newContext()
   loadAddonFile(basePath .. "Store.lua", ns)
   loadAddonFile(basePath .. "History.lua", ns)
   loadAddonFile(basePath .. "Comm.lua", ns)
+  loadAddonFile(basePath .. "Channel.lua", ns)
 
   ns.Store.Init()
   ns.Store.ResetTransientState()
@@ -119,6 +152,9 @@ function Bootstrap.newContext()
     end,
     setNow = function(value)
       env.now = value
+    end,
+    setChannelMemberCount = function(value)
+      env.channel.memberCount = value
     end,
   }
 end
@@ -138,6 +174,12 @@ end
 function Bootstrap.assertNil(value, message)
   if value ~= nil then
     error((message or "assertNil failed") .. string.format(" (actual=%s)", tostring(value)), 2)
+  end
+end
+
+function Bootstrap.assertFalse(value, message)
+  if value then
+    error(message or "assertFalse failed", 2)
   end
 end
 

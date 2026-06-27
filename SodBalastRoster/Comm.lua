@@ -178,6 +178,18 @@ function Comm.BroadcastInfo()
   end
 end
 
+function Comm.ProbeOnlineAddonMembers(now)
+  now = now or Utils.Now()
+
+  for _, name in ipairs(Store.GetOnlineAddonMembers()) do
+    local member = Store.GetMember(name)
+    if member and not member.pendingAddonProbe and (now - math.max(member.lastAddonSeenAt or 0, member.lastObservedAt or 0)) >= ns.Constants.addonProbeTimeout then
+      Store.MarkAddonProbePending(name, now)
+      Comm.QueueHello(name)
+    end
+  end
+end
+
 function Comm.SendRosterSummary(target)
   queueMessage(target, string.format("RSUM;%s;%s;%s;%s", ns.Constants.protocolVersion, Utils.PlayerName() or "", tostring(Store.GetLatestRosterUpdatedAt()), tostring(#Store.ExportRosterProfiles(ns.Constants.rosterSyncLimit, 0))), string.format("RSUM|%s", target))
 end

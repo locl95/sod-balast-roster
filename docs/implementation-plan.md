@@ -31,8 +31,8 @@ Entregables:
 - `JoinPermanentChannel("SODBALAST")`
 - deteccion de `channel id`
 - localizacion del `display index`
-- lectura del roster del canal
-- marcado online offline
+- presencia best effort por notices/chat
+- presencia fiable para peers con addon por heartbeat y `BYE`
 - historico de entradas y salidas
 
 ## Fase 3
@@ -90,7 +90,7 @@ Entregables:
 - `GetChannelId`
 - `FindDisplayIndexForChannel`
 - `ScanRoster`
-- diff contra roster previo
+- mantenimiento periodico de presencia y timeouts addon
 
 ### Comm
 
@@ -115,6 +115,7 @@ Entregables:
    - A y B se ven con perfil rico
    - C aparece sin perfil rico
    - salir del canal genera evento
+   - un peer con addon offline acaba cayendo por heartbeat aunque no llegue `LEFT`
    - `reload` mantiene datos
    - filtros funcionan
 
@@ -122,7 +123,7 @@ Entregables:
 
 1. Fase 1
 2. Fase 2
-3. Validacion manual del roster del canal
+3. Validacion manual de discovery y presencia real en SoD
 4. Fase 3
 5. Fase 4
 6. Fase 5

@@ -51,3 +51,19 @@ test("Comm.QueueHistoryRequest uses canonical chat sync timestamp", function(t)
   t.assertEqual(#ctx.ns.Comm.queue, 1)
   t.assertEqual(ctx.ns.Comm.queue[1].payload, "CREQ;4;77")
 end)
+
+test("Comm.ProbeOnlineAddonMembers queues hello for stale addon peer", function(t)
+  local ctx = t.newContext()
+  local store = ctx.ns.Store
+  local comm = ctx.ns.Comm
+
+  local member = store.MarkAddonSeen("Remote", 900)
+  member.lastAddonSeenAt = 900
+  member.lastObservedAt = 900
+
+  comm.ProbeOnlineAddonMembers(1000)
+
+  t.assertEqual(#comm.queue, 1)
+  t.assertEqual(comm.queue[1].payload, "HELLO;4;Tester")
+  t.assertTrue(member.pendingAddonProbe)
+end)

@@ -2,41 +2,44 @@
 
 ## Objetivo
 
-El addon sincroniza dos entidades distintas:
+El addon sincroniza dos entidades distintas entre peers con addon:
 
 1. `Roster`
 2. `Chat`
 
-Cada una tiene su propia estrategia de reconciliacion, pero ambas siguen el mismo patron general:
+Ambas siguen el mismo patron general:
 
-1. detectar donors
+1. detectar peers validos
 2. intercambiar summaries ligeras
-3. pedir deltas solo si faltan datos
+3. pedir deltas solo si aportan valor
 4. mergear localmente
 
 No se hace full sync continuo entre todos los peers online.
 
 ## Principios
 
-- La presencia sale del roster real del canal `SODBALAST`.
+- La presencia de peers con addon sale del propio trafico addon y de un heartbeat ligero.
+- La presencia de jugadores sin addon es best effort y no depende de resolver el roster completo del canal.
 - El perfil rico se intercambia por `addon whisper`.
 - La reconciliacion fuerte ocurre en bootstrap, no todo el tiempo.
 - Los summaries son ligeros y periodicos.
-- Los deltas se piden solo si el peer remoto sabe algo mas nuevo.
+- Los deltas se piden solo si el peer remoto sabe algo mas nuevo o si la ventana reciente diverge.
 - El sync se hace por `unicast` a pocos donors, no por broadcast.
 
 ## Entidades
 
 ### Roster
 
-Un miembro del roster contiene:
+Un miembro del roster contiene, entre otros:
 
 - `name`
-- `has_addon`
-- `is_online_in_channel`
-- `first_seen_at`
-- `last_seen_at`
-- `last_updated_at`
+- `hasAddon`
+- `isOnlineInChannel`
+- `firstSeenAt`
+- `lastSeenAt`
+- `lastObservedAt`
+- `lastAddonSeenAt`
+- `lastUpdatedAt`
 - `level`
 - `classFile`
 - `zone`
@@ -46,7 +49,9 @@ Un miembro del roster contiene:
 - `profession1Icon`
 - `profession2Icon`
 
-`last_updated_at` cambia solo cuando cambia el perfil util del miembro.
+`lastUpdatedAt` cambia solo cuando cambia el perfil util del miembro.
+
+`isOnlineInChannel` no significa que el roster completo del canal se haya resuelto por API. En el estado actual significa que el jugador ha sido observado recientemente por notice, chat, addon o `/who`, y para peers con addon tambien por heartbeat.
 
 ### Chat
 
@@ -72,6 +77,39 @@ Para `channel_message` se usa este orden:
 
 Esto permite que dos clientes que ven el mismo mensaje generen la misma identidad logica.
 
+## Discovery y presencia
+
+### Descubrimiento de peers con addon
+
+Un peer se considera conocido con addon cuando llega cualquier `CHAT_MSG_ADDON` con prefijo valido.
+
+Efectos:
+
+1. `Store.MarkAddonSeen()` lo marca online.
+2. `REQ` y `HELLO` fuerzan respuesta `INFO`.
+3. `INFO` actualiza perfil vivo.
+4. `RSUM` y `CSUM` permiten reconciliacion de roster/chat.
+
+### Descubrimiento de jugadores sin addon
+
+Un jugador sin addon solo se descubre de forma best effort por:
+
+1. `CHAT_MSG_CHANNEL_NOTICE`
+2. `CHAT_MSG_CHANNEL`
+3. `/who` manual
+
+No hay heartbeat para este grupo.
+
+### Offline de peers con addon
+
+Hay tres rutas:
+
+1. `BYE` cuando el cliente sale limpiamente
+2. timeout de heartbeat addon (`HELLO` no contestado durante varios probes)
+3. `LEFT` si Blizzard emite el notice visible
+
+La ruta fiable es el heartbeat addon; el roster detallado del canal no se usa para dar offlines duros.
+
 ## Ciclos de sincronizacion
 
 ### 1. Bootstrap fuerte
@@ -85,12 +123,12 @@ Se dispara en:
 
 Flujo:
 
-1. hacer scan del canal
-2. detectar peers con addon
-3. elegir donors
-4. enviar `RSUM`
-5. enviar `CSUM`
-6. si el donor remoto va por delante:
+1. asegurar union y visibilidad basica del canal
+2. refrescar perfil local
+3. elegir donors entre peers online con addon ya conocidos
+4. enviar `HELLO` y `RSUM`
+5. enviar `HELLO` y `CSUM`
+6. si el donor remoto va por delante o su ventana reciente diverge:
    - enviar `RREQ`
    - enviar `CREQ`
 7. importar `RPRO` y `CMSG`
@@ -100,12 +138,14 @@ Flujo:
 
 Se hace por `unicast` a donors, no a todos los peers.
 
-Frecuencias recomendadas:
+Frecuencias actuales:
 
 - `RSUM` cada `5 min`
 - `CSUM` cada `3 min`
 
 Solo anuncia el estado resumido. No empuja roster ni chat completos.
+
+Cada envio de summaries va precedido por `HELLO` al donor elegido para refrescar presencia addon y forzar `INFO` si hacia falta.
 
 ### 3. Pull por delta
 
@@ -135,6 +175,8 @@ Prioridad de donor:
 3. mayor `lastSeenAt`
 4. desempate por nombre
 
+Si un peer deja de contestar heartbeats, deja de ser donor al pasar offline.
+
 ## Summary y payloads
 
 ### Perfil vivo
@@ -142,9 +184,14 @@ Prioridad de donor:
 Mensajes:
 
 - `REQ`
+- `HELLO`
 - `INFO`
 
-`INFO` describe el peer actual y sirve para el perfil vivo.
+`REQ` se usa para pedir perfil fresco cuando un peer se descubre o su perfil caduca.
+
+`HELLO` se usa como heartbeat addon. El receptor responde con `INFO`.
+
+`INFO` describe el peer actual y sirve para perfil vivo, presencia addon y para anunciar `latestChatAt`.
 
 ### Roster
 
@@ -179,7 +226,7 @@ RPRO;4;<name>;<hasAddon>;<level>;<class>;<zone>;<guild>;<prof1>;<prof2>;<prof1Ic
 Formato:
 
 ```text
-CSUM;4;<player>;<latest_chat_at>;<message_count_recent>
+CSUM;4;<player>;<latest_chat_at>;<message_count_recent>;<oldest_at>;<first_id>;<last_id>
 ```
 
 #### `CREQ`
@@ -206,12 +253,12 @@ Al recibir `RPRO`:
 
 1. normalizar `name`
 2. crear miembro si no existe
-3. aplicar el perfil solo si:
-   - `incoming.last_updated_at > local.last_updated_at`
-   - o el perfil local esta vacio
-4. `last_seen_at = max(local, incoming)`
-5. `has_addon = true` si el remoto lo marca
+3. aplicar el perfil si aporta datos nuevos o si el perfil local estaba vacio
+4. `lastSeenAt = max(local, incoming)`
+5. `hasAddon = true` si el remoto lo marca
 6. no sobrescribir presencia online con datos remotos viejos
+
+`RPRO` enriquece roster y `lastSeenAt`, pero no es la fuente principal de presencia online para peers con addon si no hay trafico reciente.
 
 ### Chat
 
@@ -224,6 +271,14 @@ Al recibir `CMSG`:
    - mismo `text`
    - diferencia de tiempo pequena
 
+Al recibir `CSUM`:
+
+1. comparar `latestChatAt`
+2. comparar tambien la ventana reciente anunciada (`count`, `oldestAt`, `firstId`, `lastId`)
+3. si cualquier valor diverge, pedir `CREQ` desde `advertisedOldestAt - 1`
+
+Esto permite mergear historiales recientes divergentes aunque el ultimo timestamp sea parecido.
+
 ## Ventanas y limites
 
 ### Roster
@@ -235,8 +290,8 @@ Al recibir `CMSG`:
 ### Chat
 
 - `chatSyncWindow = 24 horas`
-- `chatSyncLimit = 100`
-- `chatSyncCooldown = 5 min`
+- `chatSyncLimit = 50`
+- `chatSyncCooldown = 60 s`
 
 ## Early stop
 
@@ -245,7 +300,7 @@ La reconciliacion debe parar pronto si no hay valor en seguir.
 Parar si:
 
 - `remote.latest_roster_updated_at <= local.latest_roster_updated_at`
-- `remote.latest_chat_at <= local.latest_chat_at`
+- `remote.latest_chat_at <= local.latest_chat_at` y la ventana reciente coincide
 - el primer donor ya cubrio los gaps detectados
 - no hay deltas adicionales que pedir
 
@@ -255,45 +310,42 @@ Parar si:
 - no reconciliar chat continuamente entre peers online
 - no hacer broadcast de datos completos
 - no usar `/who` como reconciliacion global
-- no pedir sync si el summary no muestra ventaja remota
+- no asumir que el roster detallado del canal es fiable en SoD
+- no pedir sync si el summary no muestra ventaja remota o divergencia reciente
 
 ## Situacion actual del codigo
 
 La base existente ya cubre:
 
-- presencia por roster del canal
+- presencia addon por `HELLO`/`INFO`/`BYE` y timeout por heartbeat
 - perfil vivo por `REQ/INFO`
 - ids deterministas de `channel_message`
-- reconciliacion ligera de roster en rejoin/reload
+- reconciliacion ligera de roster en bootstrap y summaries periodicas
 - reconciliacion de chat sin full sync continuo
-
-La evolucion natural es seguir refinando:
-
-1. donors
-2. summaries
-3. deltas
-4. merge seguro
+- merge de chat reciente por ventana resumida, no solo por ultimo timestamp
 
 ## Flujo esperado de convergencia
 
 ### Cliente nuevo
 
 1. entra al canal
-2. detecta peers con addon
-3. pide `RSUM` y `CSUM`
-4. si falta informacion, pide `RREQ` y `CREQ`
-5. hereda roster y chat recientes
+2. descubre peers por notices, chat visible o trafico addon entrante
+3. intercambia `HELLO` / `INFO`
+4. pide o recibe `RSUM` y `CSUM`
+5. si falta informacion, pide `RREQ` y `CREQ`
+6. hereda roster y chat recientes
 
 ### Cliente que estuvo offline
 
 1. vuelve al juego
 2. bootstrap inicial
-3. detecta que peers remotos tienen datos mas nuevos
+3. detecta que peers remotos tienen datos mas nuevos o ventana reciente distinta
 4. trae solo los deltas
 
 ### Dos peers ya online y estables
 
-1. solo intercambian summaries ligeras
-2. si nadie va atrasado, no se hace nada mas
+1. intercambian heartbeats addon cuando hay silencio prolongado
+2. intercambian summaries ligeras
+3. si nadie va atrasado, no se hace nada mas
 
 Esto mantiene el trafico bajo y la convergencia alta.

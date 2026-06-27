@@ -8,14 +8,16 @@ Mostrar en una misma ventana a todos los jugadores presentes en el canal, aunque
 
 ## Principios de diseño
 
-- La presencia sale del roster real del canal.
+- La presencia no depende del roster detallado del canal en SoD.
+- Para peers con addon, la presencia fiable sale del trafico addon (`INFO`/`HELLO`/`BYE`) y del heartbeat.
+- Para peers sin addon, la presencia es best effort a partir de eventos del canal, mensajes visibles y `/who` manual.
 - Los datos ricos viajan por `addon whisper`, no por el canal.
 - La UI debe ser util desde la primera version, aunque falten perfiles.
 - La persistencia es local con `SavedVariables`.
 
 ## Estado
 
-Documentacion inicial creada y scaffold del addon arrancado.
+Addon funcional con sincronizacion de perfil, roster enriquecido, reconciliacion de chat y presencia por heartbeat addon.
 
 ## Documentos
 
@@ -27,7 +29,7 @@ Documentacion inicial creada y scaffold del addon arrancado.
 
 ## Unit Testing
 
-Hay una suite minima de tests fuera del juego en `tests/` para validar logica pura de `History`, `Store` y `Comm`.
+Hay una suite minima de tests fuera del juego en `tests/` para validar logica pura de `History`, `Store`, `Comm` y `Channel`.
 
 Ejecucion:
 

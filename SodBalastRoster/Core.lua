@@ -113,7 +113,7 @@ local function runDebug()
     ns.Utils.Print("local online roster count: " .. tostring(#onlineMembers))
     for _, member in ipairs(onlineMembers) do
       ns.Utils.Print(string.format(
-        "member name=%s addon=%s online=%s level=%s class=%s zone=%s guild=%s lastSeen=%s pendingJoin=%s missingScans=%s lastObserved=%s lastAddonSeen=%s sources=scan:%s chat:%s notice:%s who:%s",
+        "member name=%s addon=%s online=%s level=%s class=%s zone=%s guild=%s lastSeen=%s lastObserved=%s lastAddonSeen=%s sources=chat:%s notice:%s who:%s",
         tostring(member.name),
         tostring(member.hasAddon),
         tostring(member.isOnlineInChannel),
@@ -122,11 +122,8 @@ local function runDebug()
         tostring(member.zone or ""),
         tostring(member.guildName or ""),
         tostring(member.lastSeenAt or 0),
-        tostring(member.pendingJoin),
-        tostring(member.missingScans or 0),
         tostring(member.lastObservedAt or 0),
         tostring(member.lastAddonSeenAt or 0),
-        tostring(member.observedByScan),
         tostring(member.observedByChat),
         tostring(member.observedByNotice),
         tostring(member.observedByWho)
@@ -306,6 +303,7 @@ Core:SetScript("OnUpdate", function(_, elapsed)
   ns.Who.CheckTimeout()
 
   local now = ns.Utils.Now()
+  ns.Comm.ProbeOnlineAddonMembers(now)
   if now - lastRosterSummaryAt >= ns.Constants.rosterSummaryInterval then
     ns.Comm.SendRosterSummaries(ns.Constants.maxPeriodicDonors)
     lastRosterSummaryAt = now
