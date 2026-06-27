@@ -115,6 +115,23 @@ function Comm.QueueHello(name)
   queueMessage(name, string.format("HELLO;%s;%s", ns.Constants.protocolVersion, Utils.PlayerName() or ""), "HELLO|" .. name)
 end
 
+function Comm.ProbeObservedPeer(name, timestamp)
+  name = Utils.NormalizeName(name)
+  if not name or name == Utils.PlayerName() then
+    return
+  end
+
+  local member = Store.GetMember(name)
+  if not Store.ShouldProbeObservedAddon(member, timestamp or Utils.Now()) then
+    return
+  end
+
+  Store.MarkHistorySyncPending(name)
+  Store.MarkRosterSyncPending(name)
+  Store.MarkAddonProbePending(name, timestamp or Utils.Now())
+  Comm.QueueHello(name)
+end
+
 function Comm.QueueHistoryRequest(name)
   name = Utils.NormalizeName(name)
   if not name or name == Utils.PlayerName() then

@@ -244,6 +244,15 @@ function Store.MarkAddonProbePending(name, timestamp)
   end
 end
 
+function Store.ShouldProbeObservedAddon(member, timestamp)
+  if not member or member.hasAddon then
+    return false
+  end
+
+  timestamp = timestamp or Utils.Now()
+  return timestamp - (member.lastAddonProbeAt or 0) >= (ns.Constants.addonProbeTimeout or 20)
+end
+
 function Store.ClearAddonProbe(name)
   local member = Store.GetMember(name)
   if member then

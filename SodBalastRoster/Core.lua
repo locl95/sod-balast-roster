@@ -40,6 +40,25 @@ local function requestBootstrapSync()
   ns.Comm.SendChatSummaries(ns.Constants.maxBootstrapDonors)
 end
 
+local function getNoticeCandidateNames(playerName, playerName2)
+  local names = {}
+  local seen = {}
+
+  local function addName(name)
+    name = ns.Utils.NormalizeName(name)
+    if not name or seen[name] then
+      return
+    end
+
+    seen[name] = true
+    names[#names + 1] = name
+  end
+
+  addName(playerName)
+  addName(playerName2)
+  return names
+end
+
 local function refreshLocalProfile(shouldBroadcast)
   local profession1, profession2, profession1Icon, profession2Icon = ns.Utils.SafeProfessions()
   local _, changes = ns.Store.SetProfile(ns.Utils.PlayerName(), {
@@ -228,39 +247,41 @@ Core:SetScript("OnEvent", function(_, event, ...)
     return
   end
 
-  if event == "CHANNEL_UI_UPDATE" or event == "CHAT_MSG_CHANNEL_NOTICE" then
-    if event == "CHAT_MSG_CHANNEL_NOTICE" then
+  if event == "CHANNEL_UI_UPDATE" or event == "CHAT_MSG_CHANNEL_NOTICE" or event == "CHAT_MSG_CHANNEL_NOTICE_USER" then
+    if event == "CHAT_MSG_CHANNEL_NOTICE" or event == "CHAT_MSG_CHANNEL_NOTICE_USER" then
       local text, playerName, _, channelName, playerName2, _, _, _, channelBaseName = ...
       if ns.Utils.IsTargetChannel(channelName, channelBaseName) and ns.Utils.IsJoinOrLeaveNotice(text) then
-        local targetName = ns.Utils.NormalizeName(playerName2)
-        local sourceName = ns.Utils.NormalizeName(playerName)
-        local name = targetName or sourceName
+        local now = ns.Utils.Now()
+        local names = getNoticeCandidateNames(playerName, playerName2)
 
-        if name and name ~= ns.Utils.PlayerName() then
-          if text == "JOINED" or text == "YOU_JOINED" or text == "YOU_CHANGED" then
-            local member, justJoined = ns.Store.MarkObservedByNotice(name, ns.Utils.Now())
-            if justJoined then
-              ns.History.Add("joined_channel", name)
-            end
-            if member and member.hasAddon then
-              ns.Comm.QueueProfileRequest(name)
-            end
-          elseif text == "LEFT" or text == "YOU_LEFT" then
-            local now = ns.Utils.Now()
-            local member = ns.Store.GetMember(name)
-            if member then
-              if now > (member.lastSeenAt or 0) then
-                member.lastSeenAt = now
+        for _, name in ipairs(names) do
+          if name ~= ns.Utils.PlayerName() then
+            if text == "JOINED" or text == "YOU_JOINED" or text == "YOU_CHANGED" or text == "CHANGED" then
+              local member, justJoined = ns.Store.MarkObservedByNotice(name, now)
+              if justJoined then
+                ns.History.Add("joined_channel", name)
               end
-              if now > (member.lastObservedAt or 0) then
-                member.lastObservedAt = now
+              if member and member.hasAddon then
+                ns.Comm.QueueProfileRequest(name)
+              else
+                ns.Comm.ProbeObservedPeer(name, now)
               end
-              if now > (member.lastObservedByNoticeAt or 0) then
-                member.lastObservedByNoticeAt = now
+            elseif text == "LEFT" or text == "YOU_LEFT" then
+              local member = ns.Store.GetMember(name)
+              if member then
+                if now > (member.lastSeenAt or 0) then
+                  member.lastSeenAt = now
+                end
+                if now > (member.lastObservedAt or 0) then
+                  member.lastObservedAt = now
+                end
+                if now > (member.lastObservedByNoticeAt or 0) then
+                  member.lastObservedByNoticeAt = now
+                end
               end
+              ns.Store.MarkOffline(name)
+              ns.History.Add("left_channel", name)
             end
-            ns.Store.MarkOffline(name)
-            ns.History.Add("left_channel", name)
           end
         end
       end
@@ -278,13 +299,16 @@ Core:SetScript("OnEvent", function(_, event, ...)
   if event == "CHAT_MSG_CHANNEL" then
     local message, sender, _, channelName, _, _, _, _, channelBaseName, _, lineId = ...
     if ns.Utils.IsTargetChannel(channelName, channelBaseName) then
-      local member, justJoined = ns.Store.MarkObservedInChannel(sender, ns.Utils.Now())
+      local now = ns.Utils.Now()
+      local member, justJoined = ns.Store.MarkObservedInChannel(sender, now)
       local normalizedSender = ns.Utils.NormalizeName(sender)
       if justJoined and ns.Utils.NormalizeName(sender) ~= ns.Utils.PlayerName() then
         ns.History.Add("joined_channel", sender)
       end
       if member and member.name ~= ns.Utils.PlayerName() and member.hasAddon then
         ns.Comm.QueueProfileRequest(member.name)
+      elseif normalizedSender and normalizedSender ~= ns.Utils.PlayerName() then
+        ns.Comm.ProbeObservedPeer(normalizedSender, now)
       end
       ns.History.AddChannelMessage(sender, message, lineId)
       if ns.ChatAlert then
@@ -350,6 +374,7 @@ Core:RegisterEvent("PLAYER_LOGOUT")
 Core:RegisterEvent("SKILL_LINES_CHANGED")
 Core:RegisterEvent("CHANNEL_UI_UPDATE")
 Core:RegisterEvent("CHAT_MSG_CHANNEL_NOTICE")
+Core:RegisterEvent("CHAT_MSG_CHANNEL_NOTICE_USER")
 Core:RegisterEvent("CHAT_MSG_CHANNEL")
 Core:RegisterEvent("CHAT_MSG_ADDON")
 Core:RegisterEvent("WHO_LIST_UPDATE")
