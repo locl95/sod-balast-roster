@@ -25,6 +25,12 @@ local defaults = {
     angle = 220,
     hidden = false,
   },
+  chatAlert = {
+    point = "TOPRIGHT",
+    relativePoint = "TOPRIGHT",
+    x = -220,
+    y = -120,
+  },
 }
 
 local function copyDefaults(target, source)
@@ -544,6 +550,10 @@ function Store.GetMinimapState()
   return Store.GetDB().minimap
 end
 
+function Store.GetChatAlertState()
+  return Store.GetDB().chatAlert
+end
+
 function Store.GetLatestRosterUpdatedAt()
   local latest = 0
   for _, member in pairs(Store.GetRoster()) do
@@ -571,6 +581,19 @@ function Store.SaveFramePosition(frame)
   ui.y = y or 0
   ui.width = math.floor(frame:GetWidth())
   ui.height = math.floor(frame:GetHeight())
+end
+
+function Store.SaveChatAlertPosition(frame)
+  if not frame then
+    return
+  end
+
+  local point, _, relativePoint, x, y = frame:GetPoint(1)
+  local state = Store.GetChatAlertState()
+  state.point = point or "CENTER"
+  state.relativePoint = relativePoint or state.point
+  state.x = x or 0
+  state.y = y or 0
 end
 
 function Store.GetVisibleRoster()

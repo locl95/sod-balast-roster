@@ -1052,6 +1052,9 @@ function UI.Refresh()
   end
 
   local rosterSelected = uiState.selectedTab ~= TAB_HISTORY
+  if not rosterSelected and ns.ChatAlert then
+    ns.ChatAlert.ClearPendingChat()
+  end
   updateTabButtonState(frame.rosterTab, rosterSelected)
   updateTabButtonState(frame.historyTab, not rosterSelected)
   frame.onlyOnline:SetShown(rosterSelected)
@@ -1085,6 +1088,10 @@ function UI.Refresh()
     frame.emptyState:Hide()
     UI.RefreshHistory()
   end
+
+  if ns.ChatAlert then
+    ns.ChatAlert.Refresh()
+  end
 end
 
 function UI.Toggle()
@@ -1095,5 +1102,14 @@ function UI.Toggle()
   end
 
   frame:Show()
+  UI.Refresh()
+end
+
+function UI.OpenChat()
+  local frame = UI.Create()
+  Store.SetUIFlag("selectedTab", TAB_HISTORY)
+  if not frame:IsShown() then
+    frame:Show()
+  end
   UI.Refresh()
 end

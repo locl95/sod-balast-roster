@@ -91,7 +91,6 @@ function MinimapButton.Create()
 
   return button
 end
-
 function MinimapButton.Show()
   local button = MinimapButton.Create()
   Store.GetMinimapState().hidden = false

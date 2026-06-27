@@ -13,6 +13,9 @@ local pendingRescanBurstId = 0
 local function runScanAndRefresh()
   ns.Channel.EnsureJoined()
   ns.Channel.ScanRoster()
+  if ns.ChatAlert then
+    ns.ChatAlert.Refresh()
+  end
   refreshUI()
 end
 
@@ -170,6 +173,8 @@ local function initialize()
   refreshLocalProfile(false)
   ns.Comm.RegisterPrefix()
   ns.MinimapButton.Create()
+  ns.ChatAlert.Create()
+  ns.ChatAlert.Refresh()
 
   SLASH_SODBALASTROSTER1 = "/sb"
   SLASH_SODBALASTROSTER2 = "/sbr"
@@ -211,6 +216,9 @@ Core:SetScript("OnEvent", function(_, event, ...)
 
   if event == "SKILL_LINES_CHANGED" then
     refreshLocalProfile(true)
+    if ns.ChatAlert then
+      ns.ChatAlert.Refresh()
+    end
     refreshUI()
     return
   end
@@ -258,15 +266,20 @@ Core:SetScript("OnEvent", function(_, event, ...)
       end
     end
 
-    runScanAndRefresh()
-    scheduleRescanBurst()
-    return
+      if ns.ChatAlert then
+        ns.ChatAlert.Refresh()
+      end
+
+      runScanAndRefresh()
+      scheduleRescanBurst()
+      return
   end
 
   if event == "CHAT_MSG_CHANNEL" then
     local message, sender, _, channelName, _, _, _, _, channelBaseName, _, lineId = ...
     if ns.Utils.IsTargetChannel(channelName, channelBaseName) then
       local member, justJoined = ns.Store.MarkObservedInChannel(sender, ns.Utils.Now())
+      local normalizedSender = ns.Utils.NormalizeName(sender)
       if justJoined and ns.Utils.NormalizeName(sender) ~= ns.Utils.PlayerName() then
         ns.History.Add("joined_channel", sender)
       end
@@ -274,6 +287,12 @@ Core:SetScript("OnEvent", function(_, event, ...)
         ns.Comm.QueueProfileRequest(member.name)
       end
       ns.History.AddChannelMessage(sender, message, lineId)
+      if ns.ChatAlert then
+        if normalizedSender and normalizedSender ~= ns.Utils.PlayerName() then
+          ns.ChatAlert.MarkPendingChat()
+        end
+        ns.ChatAlert.Refresh()
+      end
       refreshUI()
     end
     return
@@ -281,12 +300,18 @@ Core:SetScript("OnEvent", function(_, event, ...)
 
   if event == "CHAT_MSG_ADDON" then
     ns.Comm.HandleAddonMessage(...)
+    if ns.ChatAlert then
+      ns.ChatAlert.Refresh()
+    end
     refreshUI()
     return
   end
 
   if event == "WHO_LIST_UPDATE" then
     ns.Who.HandleWhoListUpdate()
+    if ns.ChatAlert then
+      ns.ChatAlert.Refresh()
+    end
     refreshUI()
   end
 end)

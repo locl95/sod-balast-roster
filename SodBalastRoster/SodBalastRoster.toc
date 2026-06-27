@@ -12,5 +12,6 @@ Channel.lua
 Comm.lua
 Who.lua
 MinimapButton.lua
+ChatAlert.lua
 UI.lua
 Core.lua
