@@ -120,7 +120,14 @@ function Store.GetMember(name)
     lastWhoRequestedAt = 0,
   }
 
-  return roster[name]
+  local member = roster[name]
+  if (member.lastChatSyncAt or 0) == 0 and (member.lastHistorySyncAt or 0) > 0 then
+    member.lastChatSyncAt = member.lastHistorySyncAt
+  elseif (member.lastHistorySyncAt or 0) == 0 and (member.lastChatSyncAt or 0) > 0 then
+    member.lastHistorySyncAt = member.lastChatSyncAt
+  end
+
+  return member
 end
 
 function Store.UpsertMember(name, patch)
@@ -505,8 +512,19 @@ end
 function Store.MarkChatSynced(name, timestamp)
   local member = Store.GetMember(name)
   if member then
-    member.lastChatSyncAt = math.max(member.lastChatSyncAt or 0, timestamp or 0)
+    local syncedAt = math.max(member.lastChatSyncAt or 0, timestamp or 0)
+    member.lastChatSyncAt = syncedAt
+    member.lastHistorySyncAt = math.max(member.lastHistorySyncAt or 0, syncedAt)
   end
+end
+
+function Store.GetChatSyncAt(name)
+  local member = Store.GetMember(name)
+  if not member then
+    return 0
+  end
+
+  return math.max(member.lastChatSyncAt or 0, member.lastHistorySyncAt or 0)
 end
 
 function Store.ShouldRequestWho(member, timestamp)
@@ -563,19 +581,11 @@ function Store.ConsumePendingHistorySync(name)
 end
 
 function Store.GetHistorySyncAt(name)
-  local member = Store.GetMember(name)
-  if not member then
-    return 0
-  end
-
-  return member.lastHistorySyncAt or 0
+  return Store.GetChatSyncAt(name)
 end
 
 function Store.MarkHistorySynced(name, timestamp)
-  local member = Store.GetMember(name)
-  if member and timestamp and timestamp > (member.lastHistorySyncAt or 0) then
-    member.lastHistorySyncAt = timestamp
-  end
+  Store.MarkChatSynced(name, timestamp)
 end
 
 function Store.GetHistoryAdvertisedAt(name)

@@ -24,3 +24,15 @@ Documentacion inicial creada y scaffold del addon arrancado.
 - `docs/implementation-plan.md`: orden de trabajo y entregas.
 - `docs/sync-cycles.md`: ciclos de sincronizacion y reconciliacion de roster/chat.
 - `docs/manual-testing.md`: pruebas manuales recomendadas para validar el addon.
+
+## Unit Testing
+
+Hay una suite minima de tests fuera del juego en `tests/` para validar logica pura de `History`, `Store` y `Comm`.
+
+Ejecucion:
+
+```text
+lua tests/test_runner.lua
+```
+
+Requiere tener un interprete `lua` disponible en local. La suite usa mocks pequenos del entorno WoW y no intenta cubrir UI ni APIs reales de Blizzard.

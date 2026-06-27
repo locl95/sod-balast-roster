@@ -121,7 +121,7 @@ function Comm.QueueHistoryRequest(name)
     return
   end
 
-  Comm.QueueChatRequest(name, Store.GetHistorySyncAt(name))
+  Comm.QueueChatRequest(name, Store.GetChatSyncAt(name))
 end
 
 function Comm.QueueRosterRequest(name)
@@ -183,7 +183,17 @@ function Comm.SendRosterSummary(target)
 end
 
 function Comm.SendChatSummary(target)
-  queueMessage(target, string.format("CSUM;%s;%s;%s;%s", ns.Constants.protocolVersion, Utils.PlayerName() or "", tostring(History.GetLatestChatAt()), tostring(#History.ExportChatSince(0, ns.Constants.historySyncLimit))), string.format("CSUM|%s", target))
+  local summary = History.GetRecentChatSummary(ns.Constants.historySyncLimit)
+  queueMessage(target, string.format(
+    "CSUM;%s;%s;%s;%s;%s;%s;%s",
+    ns.Constants.protocolVersion,
+    Utils.PlayerName() or "",
+    tostring(summary.latestAt),
+    tostring(summary.count),
+    tostring(summary.oldestAt),
+    Utils.EscapeField(summary.firstId),
+    Utils.EscapeField(summary.lastId)
+  ), string.format("CSUM|%s", target))
 end
 
 function Comm.SendRosterSummaries(maxDonors)
@@ -306,7 +316,7 @@ function Comm.HandleInfo(parts, sender)
 
   if not changes then
     if Store.ConsumePendingHistorySync(name) and Store.ShouldRequestChat(member, Utils.Now()) then
-      Comm.QueueChatRequest(name, Store.GetHistorySyncAt(name))
+      Comm.QueueChatRequest(name, Store.GetChatSyncAt(name))
     end
     if Store.ConsumePendingRosterSync(name) and Store.ShouldRequestRoster(member, Utils.Now()) then
       Comm.QueueRosterRequest(name)
@@ -329,7 +339,7 @@ function Comm.HandleInfo(parts, sender)
   end
 
   if Store.ConsumePendingHistorySync(name) and Store.ShouldRequestChat(member, Utils.Now()) then
-    Comm.QueueChatRequest(name, Store.GetHistorySyncAt(name))
+    Comm.QueueChatRequest(name, Store.GetChatSyncAt(name))
   end
   if Store.ConsumePendingRosterSync(name) and Store.ShouldRequestRoster(member, Utils.Now()) then
     Comm.QueueRosterRequest(name)
@@ -362,13 +372,29 @@ end
 function Comm.HandleChatSummary(parts, sender)
   local name = Utils.NormalizeName(parts[3]) or Utils.NormalizeName(sender)
   local latestChatAt = tonumber(parts[4]) or 0
-  if not name or latestChatAt <= History.GetLatestChatAt() then
+  local advertisedCount = tonumber(parts[5]) or 0
+  local advertisedOldestAt = tonumber(parts[6]) or 0
+  local advertisedFirstId = Utils.UnescapeField(parts[7])
+  local advertisedLastId = Utils.UnescapeField(parts[8])
+  if not name then
+    return
+  end
+
+  local localSummary = History.GetRecentChatSummary(ns.Constants.historySyncLimit)
+  local needsSync = latestChatAt > localSummary.latestAt
+    or advertisedCount ~= localSummary.count
+    or advertisedOldestAt ~= localSummary.oldestAt
+    or advertisedFirstId ~= localSummary.firstId
+    or advertisedLastId ~= localSummary.lastId
+
+  if not needsSync then
     return
   end
 
   local member = Store.UpsertMember(name, { hasAddon = true })
   if Store.ShouldRequestChat(member, Utils.Now()) then
-    Comm.QueueChatRequest(name, History.GetLatestChatAt())
+    local sinceAt = math.max(0, advertisedOldestAt - 1)
+    Comm.QueueChatRequest(name, sinceAt)
   end
 end
 

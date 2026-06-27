@@ -224,3 +224,27 @@ function History.ExportChatSince(sinceAt, limit)
 
   return recent
 end
+
+function History.GetRecentChatSummary(limit)
+  local entries = History.ExportChatSince(0, limit or ns.Constants.historySyncLimit)
+  local count = #entries
+  local oldestAt = 0
+  local latestAt = 0
+  local firstId = ""
+  local lastId = ""
+
+  if count > 0 then
+    oldestAt = tonumber(entries[1].at) or 0
+    latestAt = tonumber(entries[count].at) or 0
+    firstId = tostring(entries[1].id or "")
+    lastId = tostring(entries[count].id or "")
+  end
+
+  return {
+    count = count,
+    oldestAt = oldestAt,
+    latestAt = latestAt,
+    firstId = firstId,
+    lastId = lastId,
+  }
+end

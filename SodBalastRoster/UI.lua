@@ -121,6 +121,18 @@ local function ensureContextMenuDismissOverlay()
   return overlay
 end
 
+local function showContextMenuDismissOverlay(menu)
+  local overlay = ensureContextMenuDismissOverlay()
+  overlay:SetFrameStrata("FULLSCREEN_DIALOG")
+  overlay:SetFrameLevel(0)
+  overlay:Show()
+
+  if menu then
+    menu:SetFrameStrata("FULLSCREEN_DIALOG")
+    menu:SetFrameLevel(overlay:GetFrameLevel() + 1)
+  end
+end
+
 local function runMenuAction(action, member)
   if not member or not member.name then
     return
@@ -205,9 +217,6 @@ local function ensureContextMenu()
     end
   end)
   menu:SetScript("OnShow", function(self)
-    local overlay = ensureContextMenuDismissOverlay()
-    overlay:SetFrameLevel(math.max(0, self:GetFrameLevel() - 1))
-    overlay:Show()
     self:EnableKeyboard(true)
     self:SetPropagateKeyboardInput(false)
   end)
@@ -247,6 +256,7 @@ local function openFallbackMenu(anchor, member)
 
   menu:ClearAllPoints()
   menu:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x + 8, y + 8)
+  showContextMenuDismissOverlay(menu)
   menu:Show()
 end
 
