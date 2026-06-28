@@ -9,6 +9,7 @@ local refreshUI
 local lastRosterSummaryAt = 0
 local lastChatSummaryAt = 0
 local pendingRescanBurstId = 0
+local bootstrapHelloSent = false
 
 local function runScanAndRefresh()
   ns.Channel.EnsureJoined()
@@ -36,7 +37,11 @@ local function scheduleRescanBurst()
 end
 
 local function requestBootstrapSync()
-  ns.Comm.BroadcastHello()
+  bootstrapHelloSent = true
+  local sent = ns.Comm.BroadcastHello()
+  if not sent then
+    ns.Utils.Print("canal no listo en bootstrap, esperando YOU_JOINED")
+  end
   local donors = ns.Store.SelectBootstrapDonors(ns.Constants.maxBootstrapDonors)
   for _, donor in ipairs(donors) do
     ns.Comm.SendRosterSummary(donor)
@@ -414,6 +419,13 @@ Core:SetScript("OnEvent", function(_, event, ...)
       logNoticeDebug(event, text, playerName, channelName, playerName2, channelBaseName)
       if ns.Utils.IsTargetChannel(channelName, channelBaseName) and ns.Utils.IsJoinOrLeaveNotice(text) then
         local now = ns.Utils.Now()
+
+        if (text == "YOU_JOINED" or text == "YOU_CHANGED") and not bootstrapHelloSent then
+          -- el timer de bootstrap aún no ha disparado; el canal ya está listo
+          bootstrapHelloSent = true
+          ns.Comm.BroadcastHello()
+        end
+
         local names = getNoticeCandidateNames(playerName, playerName2)
 
         for _, name in ipairs(names) do

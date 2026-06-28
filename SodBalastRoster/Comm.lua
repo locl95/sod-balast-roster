@@ -152,7 +152,12 @@ end
 
 function Comm.BroadcastHello()
   local payload = string.format("HELLO;%s;%s", ns.Constants.protocolVersion, Utils.PlayerName() or "")
+  local channelId = ns.Channel.GetChannelId()
+  if not channelId or channelId == 0 then
+    return false
+  end
   sendAddonChannel(payload, "broadcast")
+  return true
 end
 
 function Comm.ProbeObservedPeer(name, timestamp)
