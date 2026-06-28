@@ -76,13 +76,6 @@ function Channel.ScanRoster()
   Channel.lastScanReason = memberCount and memberCount > 0 and "roster_unavailable" or nil
   Channel.stableScanCount = 0
 
-  local timedOutMembers = Store.DowngradeMissingAddonResponses(timestamp)
-  for _, member in ipairs(timedOutMembers) do
-    if member.name ~= Utils.PlayerName() then
-      History.Add("left_channel", member.name, "addon_timeout")
-    end
-  end
-
   Channel.lastScanOk = true
   return true, nil
 end

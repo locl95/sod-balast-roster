@@ -36,6 +36,23 @@ local function sendAddonWhisper(payload, target, context)
   end
 end
 
+local function sendAddonChannel(payload, context)
+  local channelId = ns.Channel.GetChannelId()
+  if not channelId or channelId == 0 then
+    return
+  end
+
+  logCommTraffic("OUT", "CHANNEL", payload, context)
+  if C_ChatInfo and C_ChatInfo.SendAddonMessage then
+    C_ChatInfo.SendAddonMessage(ns.Constants.addonPrefix, payload, "CHANNEL", tostring(channelId))
+    return
+  end
+
+  if SendAddonMessage then
+    SendAddonMessage(ns.Constants.addonPrefix, payload, "CHANNEL", tostring(channelId))
+  end
+end
+
 logCommTraffic = function(direction, peer, payload, context)
   if not Store.IsCommDebugEnabled() then
     return
@@ -131,6 +148,11 @@ function Comm.QueueHello(name, context)
   end
 
   queueMessage(name, string.format("HELLO;%s;%s", ns.Constants.protocolVersion, Utils.PlayerName() or ""), "HELLO|" .. name, context)
+end
+
+function Comm.BroadcastHello()
+  local payload = string.format("HELLO;%s;%s", ns.Constants.protocolVersion, Utils.PlayerName() or "")
+  sendAddonChannel(payload, "broadcast")
 end
 
 function Comm.ProbeObservedPeer(name, timestamp)
@@ -275,10 +297,9 @@ function Comm.SendBye(target)
 end
 
 function Comm.BroadcastBye()
-  local peers = Store.GetOnlineAddonMembers()
-  for _, name in ipairs(peers) do
-    Comm.SendBye(name)
-  end
+  local playerName = Utils.PlayerName() or ""
+  local payload = table.concat({"BYE", ns.Constants.protocolVersion, playerName}, ";")
+  sendAddonChannel(payload, "logout")
 end
 
 function Comm.SendHistorySince(target, sinceAt)

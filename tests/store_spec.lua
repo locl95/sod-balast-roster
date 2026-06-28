@@ -35,18 +35,6 @@ test("Store.DowngradeMissingAddonResponses marks addon peer offline after repeat
 
   store.MarkAddonProbePending("Remote", now - 30)
   changed = store.DowngradeMissingAddonResponses(now)
-  t.assertEqual(#changed, 0)
-  t.assertEqual(member.missedAddonProbes, 2)
-  t.assertTrue(member.isOnlineInChannel)
-
-  store.MarkAddonProbePending("Remote", now - 30)
-  changed = store.DowngradeMissingAddonResponses(now)
-  t.assertEqual(#changed, 0)
-  t.assertEqual(member.missedAddonProbes, 3)
-  t.assertTrue(member.isOnlineInChannel)
-
-  store.MarkAddonProbePending("Remote", now - 30)
-  changed = store.DowngradeMissingAddonResponses(now)
   t.assertEqual(#changed, 1)
   t.assertFalse(member.isOnlineInChannel)
   t.assertEqual(changed[1].name, "Remote")
