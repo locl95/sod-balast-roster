@@ -20,6 +20,7 @@ local defaults = {
     onlyAddon = false,
     search = "",
     selectedTab = "roster",
+    debugLogType = "comm",
   },
   minimap = {
     angle = 220,
