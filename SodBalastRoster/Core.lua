@@ -36,9 +36,9 @@ local function scheduleRescanBurst()
 end
 
 local function requestBootstrapSync()
+  ns.Comm.BroadcastHello()
   local donors = ns.Store.SelectBootstrapDonors(ns.Constants.maxBootstrapDonors)
   for _, donor in ipairs(donors) do
-    ns.Comm.QueueHello(donor, "bootstrap")
     ns.Comm.SendRosterSummary(donor)
     ns.Comm.SendChatSummary(donor)
   end
@@ -395,13 +395,21 @@ Core:SetScript("OnEvent", function(_, event, ...)
     return
   end
 
+  if event == "PLAYER_CAMPING" or event == "PLAYER_QUITING" then
+    -- fires at the START of the logout/quit countdown, while still fully connected
+    ns.Comm.BroadcastBye()
+    return
+  end
+
   if event == "PLAYER_LOGOUT" then
+    -- last-ditch fallback; delivery not guaranteed at this point
     ns.Comm.BroadcastBye()
     return
   end
 
   if event == "CHANNEL_UI_UPDATE" or event == "CHAT_MSG_CHANNEL_NOTICE" or event == "CHAT_MSG_CHANNEL_NOTICE_USER" then
     if event == "CHAT_MSG_CHANNEL_NOTICE" or event == "CHAT_MSG_CHANNEL_NOTICE_USER" then
+      -- args: text, playerName, _, channelName, playerName2, _, _, _, channelBaseName
       local text, playerName, _, channelName, playerName2, _, _, _, channelBaseName = ...
       logNoticeDebug(event, text, playerName, channelName, playerName2, channelBaseName)
       if ns.Utils.IsTargetChannel(channelName, channelBaseName) and ns.Utils.IsJoinOrLeaveNotice(text) then
@@ -506,6 +514,17 @@ Core:SetScript("OnUpdate", function(_, elapsed)
   ns.Who.CheckTimeout()
 
   local now = ns.Utils.Now()
+
+  local timedOutMembers = ns.Store.DowngradeMissingAddonResponses(now)
+  if #timedOutMembers > 0 then
+    for _, member in ipairs(timedOutMembers) do
+      if member.name ~= ns.Utils.PlayerName() then
+        ns.History.Add("left_channel", member.name, "addon_timeout")
+      end
+    end
+    refreshUI()
+  end
+
   ns.Comm.ProbeOnlineAddonMembers(now)
   if now - lastRosterSummaryAt >= ns.Constants.rosterSummaryInterval then
     ns.Comm.SendRosterSummaries(ns.Constants.maxPeriodicDonors)
@@ -524,6 +543,8 @@ end)
 
 Core:RegisterEvent("PLAYER_LOGIN")
 Core:RegisterEvent("PLAYER_ENTERING_WORLD")
+Core:RegisterEvent("PLAYER_CAMPING")
+Core:RegisterEvent("PLAYER_QUITING")
 Core:RegisterEvent("PLAYER_LOGOUT")
 Core:RegisterEvent("SKILL_LINES_CHANGED")
 Core:RegisterEvent("CHANNEL_UI_UPDATE")
