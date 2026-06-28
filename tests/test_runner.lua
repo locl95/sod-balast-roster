@@ -12,6 +12,7 @@ dofile("./tests/history_spec.lua")
 dofile("./tests/store_spec.lua")
 dofile("./tests/comm_spec.lua")
 dofile("./tests/channel_spec.lua")
+dofile("./tests/utils_spec.lua")
 
 local failures = 0
 

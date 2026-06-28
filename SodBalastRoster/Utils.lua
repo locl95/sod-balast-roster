@@ -234,10 +234,19 @@ function Utils.SplitMessage(message, separator)
   end
 
   separator = separator or ";"
-  local pattern = string.format("([^%s]+)", separator)
-  for piece in string.gmatch(message, pattern) do
-    parts[#parts + 1] = piece
+  local startIndex = 1
+
+  while true do
+    local separatorIndex = string.find(message, separator, startIndex, true)
+    if not separatorIndex then
+      parts[#parts + 1] = string.sub(message, startIndex)
+      break
+    end
+
+    parts[#parts + 1] = string.sub(message, startIndex, separatorIndex - 1)
+    startIndex = separatorIndex + #separator
   end
+
   return parts
 end
 

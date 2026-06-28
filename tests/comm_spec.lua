@@ -105,3 +105,50 @@ test("Comm.HandleHistoryEvent updates sender chat sync for CMSG", function(t)
 
   t.assertEqual(ctx.ns.Store.GetChatSyncAt("Remote"), 1600)
 end)
+
+test("Comm.HandleAddonMessage preserves empty INFO fields without shifting advertised chat timestamp", function(t)
+  local ctx = t.newContext()
+
+  ctx.ns.Comm.HandleAddonMessage(
+    "SBRoster",
+    "INFO;4;Cursefettfr;25;WARLOCK;Tirisfal Glades;F R E S H V;Alchemy;Herbalism;136240;;1782588517",
+    "WHISPER",
+    "Cursefettfr"
+  )
+
+  local member = ctx.ns.Store.GetMember("Cursefettfr")
+  t.assertEqual(member.zone, "Tirisfal Glades")
+  t.assertEqual(member.guildName, "F R E S H V")
+  t.assertEqual(member.profession1Icon, "136240")
+  t.assertEqual(member.profession2Icon, "")
+  t.assertEqual(member.lastHistoryAdvertisedAt, 1782588517)
+end)
+
+test("Comm.HandleRosterProfile preserves empty RPRO fields without shifting timestamps", function(t)
+  local ctx = t.newContext()
+
+  ctx.ns.Comm.HandleRosterProfile({
+    "RPRO",
+    "4",
+    "Cursefettfr",
+    "1",
+    "25",
+    "WARLOCK",
+    "Tirisfal Glades",
+    "F R E S H V",
+    "Alchemy",
+    "Herbalism",
+    "136240",
+    "",
+    "1782591250",
+    "1782591208",
+  }, "Cursefettfr")
+
+  local member = ctx.ns.Store.GetMember("Cursefettfr")
+  t.assertEqual(member.zone, "Tirisfal Glades")
+  t.assertEqual(member.guildName, "F R E S H V")
+  t.assertEqual(member.profession1Icon, "136240")
+  t.assertEqual(member.profession2Icon, "")
+  t.assertEqual(member.lastSeenAt, 1782591250)
+  t.assertEqual(member.lastProfileAt, 1782591208)
+end)

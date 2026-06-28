@@ -1,0 +1,11 @@
+test("Utils.SplitMessage preserves empty fields", function(t)
+  local ctx = t.newContext()
+  local parts = ctx.ns.Utils.SplitMessage("A;B;;D;", ";")
+
+  t.assertEqual(#parts, 5)
+  t.assertEqual(parts[1], "A")
+  t.assertEqual(parts[2], "B")
+  t.assertEqual(parts[3], "")
+  t.assertEqual(parts[4], "D")
+  t.assertEqual(parts[5], "")
+end)
