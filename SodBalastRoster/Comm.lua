@@ -37,22 +37,6 @@ local function sendAddonWhisper(payload, target, context)
   end
 end
 
-local function sendAddonChannel(payload, context)
-  local displayIndex = ns.Channel.FindDisplayIndex()
-  if not displayIndex then
-    return
-  end
-
-  logCommTraffic("OUT", "CHANNEL", payload, context)
-  if C_ChatInfo and C_ChatInfo.SendAddonMessage then
-    C_ChatInfo.SendAddonMessage(ns.Constants.addonPrefix, payload, "CHANNEL", tostring(displayIndex))
-    return
-  end
-
-  if SendAddonMessage then
-    SendAddonMessage(ns.Constants.addonPrefix, payload, "CHANNEL", tostring(displayIndex))
-  end
-end
 
 logCommTraffic = function(direction, peer, payload, context)
   if not Store.IsCommDebugEnabled() then
@@ -152,12 +136,15 @@ function Comm.QueueHello(name, context)
 end
 
 function Comm.BroadcastHello()
-  local payload = string.format("HELLO;%s;%s", ns.Constants.protocolVersion, Utils.PlayerName() or "")
-  if not ns.Channel.FindDisplayIndex() then
-    return false
+  local self = Utils.PlayerName()
+  local sent = 0
+  for _, member in pairs(Store.GetRoster()) do
+    if member.hasAddon and member.name ~= self then
+      Comm.QueueHello(member.name, "broadcast")
+      sent = sent + 1
+    end
   end
-  sendAddonChannel(payload, "broadcast")
-  return true
+  return sent > 0
 end
 
 function Comm.SetBootstrapSyncBudget(n)
@@ -219,6 +206,15 @@ function Comm.SendInfo(target)
 
   local playerName = Utils.PlayerName() or ""
   local profession1, profession2, profession1Icon, profession2Icon = Utils.SafeProfessions()
+
+  local onlinePeers = Store.GetOnlineAddonMembers()
+  local peerList = {}
+  for _, name in ipairs(onlinePeers) do
+    if name ~= playerName and name ~= target and #peerList < 5 then
+      peerList[#peerList + 1] = name
+    end
+  end
+
   local payload = table.concat({
     "INFO",
     ns.Constants.protocolVersion,
@@ -232,6 +228,7 @@ function Comm.SendInfo(target)
     tostring(profession1Icon or ""),
     tostring(profession2Icon or ""),
     tostring(History.GetLatestChatAt()),
+    table.concat(peerList, ","),
   }, ";")
 
   sendAddonWhisper(payload, target)
@@ -306,9 +303,10 @@ function Comm.SendBye(target)
 end
 
 function Comm.BroadcastBye()
-  local playerName = Utils.PlayerName() or ""
-  local payload = table.concat({"BYE", ns.Constants.protocolVersion, playerName}, ";")
-  sendAddonChannel(payload, "logout")
+  local peers = Store.GetOnlineAddonMembers()
+  for _, name in ipairs(peers) do
+    Comm.SendBye(name)
+  end
 end
 
 function Comm.SendHistorySince(target, sinceAt)
@@ -427,6 +425,28 @@ function Comm.HandleInfo(parts, sender)
   end
   if Store.ConsumePendingRosterSync(name) and Store.ShouldRequestRoster(member, Utils.Now()) then
     Comm.QueueRosterRequest(name)
+  end
+
+  local peerListStr = parts[13]
+  if peerListStr and peerListStr ~= "" then
+    local now = Utils.Now()
+    local self = Utils.PlayerName()
+    for rawPeer in string.gmatch(peerListStr, "[^,]+") do
+      local peer = Utils.NormalizeName(rawPeer)
+      if peer and peer ~= self then
+        Store.MarkAddonSeen(peer, now)
+        local key = "HELLO|" .. peer
+        if Comm.queued[key] then
+          Comm.queued[key] = nil
+          for i = #Comm.queue, 1, -1 do
+            if Comm.queue[i].key == key then
+              table.remove(Comm.queue, i)
+              break
+            end
+          end
+        end
+      end
+    end
   end
 end
 
