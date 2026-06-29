@@ -39,10 +39,7 @@ end
 local function requestBootstrapSync()
   ns.Comm.SetBootstrapSyncBudget(ns.Constants.maxBootstrapDonors)
   bootstrapHelloSent = true
-  local sent = ns.Comm.BroadcastHello()
-  if not sent then
-    ns.Utils.Print("canal no listo en bootstrap, esperando YOU_JOINED")
-  end
+  ns.Comm.BroadcastHello()
 end
 
 local function getNoticeCandidateNames(playerName, playerName2)
