@@ -33,3 +33,28 @@ test("History.AddImported deduplicates equivalent remote chat messages", functio
   t.assertEqual(added, false)
   t.assertEqual(#ctx.ns.History.GetEntries(), 1)
 end)
+
+test("History.AddImported promotes hash ID to canonical lineId on content match", function(t)
+  local ctx = t.newContext()
+  ctx.setNow(800)
+  -- AddChannelMessage with no lineId produces a hash ID.
+  local local_entry = ctx.ns.History.AddChannelMessage("Alice", "upgrade me", nil)
+  t.assertFalse(string.match(local_entry.id, "^chan:%d+$") ~= nil, "precondition: hash ID expected")
+
+  -- Remote sends same message with a canonical lineId.
+  local imported, added = ctx.ns.History.AddImported({
+    id = "chan:999",
+    source = "Remote",
+    name = "Alice",
+    type = "channel_message",
+    details = "upgrade me",
+    at = 800,
+  })
+
+  t.assertNil(imported)
+  t.assertEqual(added, false)
+  -- The existing entry should now carry the canonical ID.
+  local entries = ctx.ns.History.GetEntries()
+  t.assertEqual(#entries, 1)
+  t.assertEqual(entries[1].id, "chan:999")
+end)

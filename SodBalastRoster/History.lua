@@ -36,7 +36,8 @@ local function buildChannelMessageId(name, details, lineId, at)
   return string.format("chan:%s:%s:%s", Utils.NormalizeName(name) or "?", Utils.Trim(details or ""), bucket)
 end
 
-local function hasEquivalentChannelMessage(name, details, at)
+-- Devuelve la entrada equivalente (mismo sender, mismo texto, ±2s) o nil.
+local function findEquivalentChannelMessage(name, details, at)
   local normalizedName = Utils.NormalizeName(name) or "?"
   details = Utils.Trim(details or "")
   at = tonumber(at) or 0
@@ -46,11 +47,16 @@ local function hasEquivalentChannelMessage(name, details, at)
       and (Utils.NormalizeName(entry.name) or "?") == normalizedName
       and Utils.Trim(entry.details or "") == details
       and math.abs((tonumber(entry.at) or 0) - at) <= 2 then
-      return true
+      return entry
     end
   end
 
-  return false
+  return nil
+end
+
+-- Devuelve true si el id parece un lineId canonico (chan:NNNN, solo digitos).
+local function isLineId(id)
+  return id ~= nil and string.match(tostring(id), "^chan:%d+$") ~= nil
 end
 
 local function insertEntry(entry)
@@ -123,8 +129,18 @@ function History.AddImported(entry)
     return nil, false
   end
 
-  if entry.type == "channel_message" and hasEquivalentChannelMessage(entry.name, entry.details, entry.at) then
-    return nil, false
+  if entry.type == "channel_message" then
+    local equivalent = findEquivalentChannelMessage(entry.name, entry.details, entry.at)
+    if equivalent then
+      -- Si el incoming tiene ID canonico (lineId) y el existente tiene un ID hash,
+      -- promover el existente al ID canonico para que los CSUM converjan.
+      if isLineId(entry.id) and not isLineId(equivalent.id) then
+        ns.historyIndex[equivalent.id] = nil
+        equivalent.id = entry.id
+        ns.historyIndex[entry.id] = true
+      end
+      return nil, false
+    end
   end
 
   local imported = {
@@ -146,7 +162,7 @@ function History.AddChannelMessage(sender, message, lineId)
   end
 
   local now = Utils.Now()
-  if hasEquivalentChannelMessage(sender, message, now) then
+  if findEquivalentChannelMessage(sender, message, now) then
     return nil
   end
 

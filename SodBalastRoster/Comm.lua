@@ -429,22 +429,16 @@ function Comm.HandleInfo(parts, sender)
 
   local peerListStr = parts[13]
   if peerListStr and peerListStr ~= "" then
-    local now = Utils.Now()
     local self = Utils.PlayerName()
     for rawPeer in string.gmatch(peerListStr, "[^,]+") do
       local peer = Utils.NormalizeName(rawPeer)
       if peer and peer ~= self then
-        Store.MarkAddonSeen(peer, now)
-        local key = "HELLO|" .. peer
-        if Comm.queued[key] then
-          Comm.queued[key] = nil
-          for i = #Comm.queue, 1, -1 do
-            if Comm.queue[i].key == key then
-              table.remove(Comm.queue, i)
-              break
-            end
-          end
-        end
+        -- Queue a direct HELLO to confirm this peer's status.
+        -- Do NOT call MarkAddonSeen here: accepting a third-party peer list as
+        -- proof of online status resets missedAddonProbes and pendingAddonProbe,
+        -- which breaks DowngradeMissingAddonResponses and keeps offline peers
+        -- stuck as online indefinitely.
+        Comm.QueueHello(peer)
       end
     end
   end
@@ -492,6 +486,23 @@ function Comm.HandleChatSummary(parts, sender)
     or advertisedLastId ~= localSummary.lastId
 
   if not needsSync then
+    return
+  end
+
+  -- Superconjunto: solo saltamos el CREQ si todas estas condiciones son ciertas:
+  --   1. Nuestro mensaje mas reciente es igual o mas nuevo (no nos falta el final)
+  --   2. Tenemos al menos tantos mensajes (no nos falta cantidad)
+  --   3. Tenemos estrictamente MAS mensajes (somos un superconjunto seguro),
+  --      O bien los IDs de los extremos coinciden (misma ventana, divergencia interna ya resuelta)
+  --   4. Nuestro mensaje mas antiguo es igual o mas antiguo (no nos falta el principio)
+  -- La condicion 3 evita suprimir el CREQ cuando el remoto tiene la misma cantidad
+  -- pero IDs distintos, lo que indicaria mensajes diferentes que aun necesitamos importar.
+  local idsSame = localSummary.firstId == advertisedFirstId and localSummary.lastId == advertisedLastId
+  local isSuperset = localSummary.latestAt >= latestChatAt
+    and localSummary.count >= advertisedCount
+    and (localSummary.count > advertisedCount or idsSame)
+    and (advertisedOldestAt == 0 or localSummary.oldestAt <= advertisedOldestAt)
+  if isSuperset then
     return
   end
 

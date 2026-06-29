@@ -159,6 +159,7 @@ refreshUI = function()
 end
 
 local function initialize()
+  bootstrapHelloSent = false
   ns.Store.Init()
   ns.Store.ResetTransientState()
   ns.History.Init()
@@ -195,7 +196,11 @@ Core:SetScript("OnEvent", function(_, event, ...)
     ns.Channel.EnsureJoined()
     C_Timer.After(2, function()
       runScanAndRefresh()
-      requestBootstrapSync()
+      -- PLAYER_LOGIN ya programa requestBootstrapSync via initialize().
+      -- Solo disparar aqui si no se lanzo todavia (p.ej. loading screen sin login).
+      if not bootstrapHelloSent then
+        requestBootstrapSync()
+      end
       scheduleRescanBurst()
     end)
     return
