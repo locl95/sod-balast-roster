@@ -38,19 +38,19 @@ local function sendAddonWhisper(payload, target, context)
 end
 
 local function sendAddonChannel(payload, context)
-  local channelId = ns.Channel.GetChannelId()
-  if not channelId or channelId == 0 then
+  local displayIndex = ns.Channel.FindDisplayIndex()
+  if not displayIndex then
     return
   end
 
   logCommTraffic("OUT", "CHANNEL", payload, context)
   if C_ChatInfo and C_ChatInfo.SendAddonMessage then
-    C_ChatInfo.SendAddonMessage(ns.Constants.addonPrefix, payload, "CHANNEL", tostring(channelId))
+    C_ChatInfo.SendAddonMessage(ns.Constants.addonPrefix, payload, "CHANNEL", tostring(displayIndex))
     return
   end
 
   if SendAddonMessage then
-    SendAddonMessage(ns.Constants.addonPrefix, payload, "CHANNEL", tostring(channelId))
+    SendAddonMessage(ns.Constants.addonPrefix, payload, "CHANNEL", tostring(displayIndex))
   end
 end
 
@@ -153,8 +153,7 @@ end
 
 function Comm.BroadcastHello()
   local payload = string.format("HELLO;%s;%s", ns.Constants.protocolVersion, Utils.PlayerName() or "")
-  local channelId = ns.Channel.GetChannelId()
-  if not channelId or channelId == 0 then
+  if not ns.Channel.FindDisplayIndex() then
     return false
   end
   sendAddonChannel(payload, "broadcast")
