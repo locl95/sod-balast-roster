@@ -8,6 +8,7 @@ local Comm = {
   queued = {},
   lastSendAt = 0,
   lastHistorySummaryAt = 0,
+  bootstrapSyncBudget = 0,
 }
 ns.Comm = Comm
 
@@ -158,6 +159,10 @@ function Comm.BroadcastHello()
   end
   sendAddonChannel(payload, "broadcast")
   return true
+end
+
+function Comm.SetBootstrapSyncBudget(n)
+  Comm.bootstrapSyncBudget = n or 0
 end
 
 function Comm.ProbeObservedPeer(name, timestamp)
@@ -386,6 +391,13 @@ function Comm.HandleInfo(parts, sender)
   }, Utils.Now())
 
   Store.MarkHistoryAdvertised(name, advertisedAt)
+
+  -- Bootstrap sync: los primeros N en responder al channel HELLO se convierten en donors
+  if Comm.bootstrapSyncBudget > 0 then
+    Comm.bootstrapSyncBudget = Comm.bootstrapSyncBudget - 1
+    Comm.QueueChatRequest(name, Store.GetChatSyncAt(name))
+    Comm.QueueRosterRequest(name)
+  end
 
   if not changes then
     if Store.ConsumePendingHistorySync(name) and Store.ShouldRequestChat(member, Utils.Now()) then
