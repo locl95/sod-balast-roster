@@ -821,18 +821,8 @@ function UI.Create()
     end
 
     ns.Channel.EnsureJoined()
-    ns.Channel.ScanRoster()
+    ns.Comm.BroadcastHello()
     UI.Refresh()
-  end)
-
-  frame.debugButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-  frame.debugButton:SetSize(70, 20)
-  frame.debugButton:SetPoint("LEFT", frame.refreshButton, "RIGHT", 8, 0)
-  frame.debugButton:SetText("Debug")
-  frame.debugButton:SetScript("OnClick", function()
-    if ns.Core and ns.Core.RunDebug then
-      ns.Core.RunDebug()
-    end
   end)
 
   frame.debugTypeButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
@@ -1264,7 +1254,6 @@ function UI.Refresh()
   frame.onlyAddon.label:SetShown(rosterSelected)
   frame.searchBox:SetShown(rosterSelected)
   frame.refreshButton:SetShown(rosterSelected or debugSelected)
-  frame.debugButton:SetShown(rosterSelected)
   frame.debugTypeButton:SetShown(debugSelected)
   frame.debugToggleButton:SetShown(debugSelected)
   frame.debugClearButton:SetShown(debugSelected)

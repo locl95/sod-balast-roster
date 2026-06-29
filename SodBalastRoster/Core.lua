@@ -13,7 +13,7 @@ local bootstrapHelloSent = false
 
 local function runScanAndRefresh()
   ns.Channel.EnsureJoined()
-  ns.Channel.ScanRoster()
+  ns.Store.MarkSelfInChannel(ns.Utils.Now())
   if ns.ChatAlert then
     ns.ChatAlert.Refresh()
   end
@@ -37,15 +37,11 @@ local function scheduleRescanBurst()
 end
 
 local function requestBootstrapSync()
+  ns.Comm.SetBootstrapSyncBudget(ns.Constants.maxBootstrapDonors)
   bootstrapHelloSent = true
   local sent = ns.Comm.BroadcastHello()
   if not sent then
     ns.Utils.Print("canal no listo en bootstrap, esperando YOU_JOINED")
-  end
-  local donors = ns.Store.SelectBootstrapDonors(ns.Constants.maxBootstrapDonors)
-  for _, donor in ipairs(donors) do
-    ns.Comm.SendRosterSummary(donor)
-    ns.Comm.SendChatSummary(donor)
   end
 end
 
@@ -98,77 +94,6 @@ local function safeCreateUI()
   return result
 end
 
-local function runDebug()
-  ns.Utils.Print("running debug scan")
-  Core.lastDebugSummary = "running debug scan"
-
-  local ok, err = pcall(function()
-    ns.Channel.EnsureJoined()
-    local scanOk, reason = ns.Channel.ScanRoster()
-    local status = ns.Channel.DebugStatus()
-    local summary = string.format(
-      "debug channelId=%s displayIndex=%s visibleCount=%s memberCount=%s resolvedCount=%s stableScans=%s bestEffort=%s scanOk=%s reason=%s",
-      tostring(status.channelId),
-      tostring(status.displayIndex),
-      tostring(status.visibleCount),
-      tostring(status.lastMemberCount),
-      tostring(status.lastResolvedCount),
-      tostring(status.stableScanCount),
-      tostring(status.bestEffort),
-      tostring(scanOk),
-      tostring(reason)
-    )
-
-    Core.lastDebugSummary = summary
-    ns.Utils.Print(summary)
-
-    if status.lastResolvedNames and #status.lastResolvedNames > 0 then
-      ns.Utils.Print("resolved names: " .. table.concat(status.lastResolvedNames, ", "))
-    end
-
-    if status.lastFallbackPlayer then
-      ns.Utils.Print("fallback candidate: " .. tostring(status.lastFallbackPlayer))
-    end
-
-    local onlineMembers = {}
-    for _, member in pairs(ns.Store.GetRoster()) do
-      if member.isOnlineInChannel then
-        onlineMembers[#onlineMembers + 1] = member
-      end
-    end
-
-    table.sort(onlineMembers, function(left, right)
-      return left.name < right.name
-    end)
-
-    ns.Utils.Print("local online roster count: " .. tostring(#onlineMembers))
-    for _, member in ipairs(onlineMembers) do
-      ns.Utils.Print(string.format(
-        "member name=%s addon=%s online=%s level=%s class=%s zone=%s guild=%s lastSeen=%s lastObserved=%s lastAddonSeen=%s sources=chat:%s notice:%s who:%s",
-        tostring(member.name),
-        tostring(member.hasAddon),
-        tostring(member.isOnlineInChannel),
-        tostring(member.level or 0),
-        tostring(member.classFile or ""),
-        tostring(member.zone or ""),
-        tostring(member.guildName or ""),
-        tostring(member.lastSeenAt or 0),
-        tostring(member.lastObservedAt or 0),
-        tostring(member.lastAddonSeenAt or 0),
-        tostring(member.observedByChat),
-        tostring(member.observedByNotice),
-        tostring(member.observedByWho)
-      ))
-    end
-  end)
-
-  if not ok then
-    Core.lastDebugSummary = "debug error: " .. tostring(err)
-    ns.Utils.Print("debug error: " .. tostring(err))
-  end
-
-  refreshUI()
-end
 
 local function printCommDebugLogs(limit)
   local logs = ns.Store.GetCommDebugLogs()
@@ -306,15 +231,9 @@ local function logNoticeDebug(eventName, text, playerName, channelName, playerNa
   })
 end
 
-Core.RunDebug = runDebug
 
 local function handleSlashCommand(message)
   message = ns.Utils.Trim(message or "")
-
-  if message == "debug" then
-    runDebug()
-    return
-  end
 
   local debugCommand = string.match(message, "^debug%s+(.+)$")
   if debugCommand then
@@ -359,13 +278,8 @@ local function initialize()
     handleSlashCommand(message)
   end
 
-  SLASH_SODBALASTROSTERDEBUG1 = "/sbd"
-  SlashCmdList.SODBALASTROSTERDEBUG = function()
-    runDebug()
-  end
-
   ns.Channel.EnsureJoined()
-  ns.Utils.Print("loaded. Use /sb to open, /sbd or Debug for channel diagnostics.")
+  ns.Utils.Print("loaded. Use /sb to open.")
   C_Timer.After(2, function()
     refreshLocalProfile(true)
     runScanAndRefresh()
