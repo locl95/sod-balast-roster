@@ -13,6 +13,9 @@ local TAB_DEBUG = "debug"
 local ROW_HEIGHT = 18
 local VISIBLE_ROWS = 16
 local TAB_ICON_SIZE = 48
+local REFRESH_COOLDOWN = 15
+
+local lastRefreshAt = 0
 
 local TAB_TEXTURES = {
   [TAB_ROSTER] = "Interface\\Icons\\Achievement_GuildPerk_EverybodysFriend",
@@ -406,31 +409,6 @@ local function formatCommDebugLine(entry)
   ) .. DEBUG_COLORS.reset
 end
 
-local function formatNoticeDebugLine(entry)
-  local baseColor = DEBUG_COLORS.notice
-  local eventText = tostring(entry.event or "?")
-  local textValue = tostring(entry.text or "")
-  local suspicious = textValue == "" or textValue == "?"
-  if suspicious then
-    baseColor = DEBUG_COLORS.warning
-  end
-
-  return string.format(
-    "%s[%s]%s %s%s%s text=%s%s%s player=%s channel=%s base=%s",
-    baseColor,
-    date("%H:%M:%S", entry.at or Utils.Now()),
-    DEBUG_COLORS.reset,
-    DEBUG_COLORS.messageType,
-    eventText,
-    DEBUG_COLORS.reset,
-    baseColor,
-    textValue,
-    DEBUG_COLORS.reset,
-    tostring(entry.playerName or ""),
-    tostring(entry.channelName or ""),
-    tostring(entry.channelBaseName or "")
-  )
-end
 
 local function setRowTexts(row, member)
   local classColor = getClassColor(member.classFile)
@@ -820,30 +798,31 @@ function UI.Create()
       return
     end
 
+    local now = Utils.Now()
+    if now - lastRefreshAt < REFRESH_COOLDOWN then
+      return
+    end
+    lastRefreshAt = now
     ns.Channel.EnsureJoined()
     ns.Comm.BroadcastHello()
     UI.Refresh()
   end)
 
-  frame.debugTypeButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-  frame.debugTypeButton:SetSize(90, 20)
-  frame.debugTypeButton:SetPoint("LEFT", frame.refreshButton, "RIGHT", 8, 0)
-  frame.debugTypeButton:SetScript("OnClick", function()
-    local nextType = Store.GetUIState().debugLogType == "comm" and "notice" or "comm"
-    Store.SetUIFlag("debugLogType", nextType)
+  frame.purgeButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+  frame.purgeButton:SetSize(65, 20)
+  frame.purgeButton:SetPoint("LEFT", frame.refreshButton, "RIGHT", 8, 0)
+  frame.purgeButton:SetText("Purge")
+  frame.purgeButton:SetScript("OnClick", function()
+    local count = Store.PurgeBlanks()
+    ns.Utils.Print(string.format("Purged %d blank member(s).", count))
     UI.Refresh()
   end)
 
   frame.debugToggleButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
   frame.debugToggleButton:SetSize(80, 20)
-  frame.debugToggleButton:SetPoint("LEFT", frame.debugTypeButton, "RIGHT", 8, 0)
+  frame.debugToggleButton:SetPoint("LEFT", frame.purgeButton, "RIGHT", 8, 0)
   frame.debugToggleButton:SetScript("OnClick", function()
-    local debugLogType = Store.GetUIState().debugLogType
-    if debugLogType == "notice" then
-      Store.SetNoticeDebugEnabled(not Store.IsNoticeDebugEnabled())
-    else
-      Store.SetCommDebugEnabled(not Store.IsCommDebugEnabled())
-    end
+    Store.SetCommDebugEnabled(not Store.IsCommDebugEnabled())
     UI.Refresh()
   end)
 
@@ -852,12 +831,7 @@ function UI.Create()
   frame.debugClearButton:SetPoint("LEFT", frame.debugToggleButton, "RIGHT", 8, 0)
   frame.debugClearButton:SetText("Clear")
   frame.debugClearButton:SetScript("OnClick", function()
-    local debugLogType = Store.GetUIState().debugLogType
-    if debugLogType == "notice" then
-      Store.ClearNoticeDebugLogs()
-    else
-      Store.ClearCommDebugLogs()
-    end
+    Store.ClearCommDebugLogs()
     UI.Refresh()
   end)
 
@@ -1165,15 +1139,7 @@ function UI.RefreshHistory()
   frame.status:SetText("")
 end
 
-local function getDebugLogConfig(debugLogType)
-  if debugLogType == "notice" then
-    return {
-      enabled = Store.IsNoticeDebugEnabled(),
-      logs = Store.GetNoticeDebugLogs(),
-      label = "Notice",
-    }
-  end
-
+local function getDebugLogConfig()
   return {
     enabled = Store.IsCommDebugEnabled(),
     logs = Store.GetCommDebugLogs(),
@@ -1183,8 +1149,7 @@ end
 
 function UI.RefreshDebug()
   local frame = UI.Create()
-  local uiState = Store.GetUIState()
-  local config = getDebugLogConfig(uiState.debugLogType)
+  local config = getDebugLogConfig()
   local logs = config.logs
   local lines = {}
   local previousScroll = frame.historyScrollPosition or 0
@@ -1192,16 +1157,11 @@ function UI.RefreshDebug()
 
   for index = 1, #logs do
     local entry = logs[index]
-    if uiState.debugLogType == "notice" then
-      lines[#lines + 1] = formatNoticeDebugLine(entry)
-      lastSignaturePart = tostring(entry.raw or lines[#lines])
-    else
-      lines[#lines + 1] = formatCommDebugLine(entry)
-      lastSignaturePart = tostring(entry.payload or "") .. tostring(entry.context or "")
-    end
+    lines[#lines + 1] = formatCommDebugLine(entry)
+    lastSignaturePart = tostring(entry.payload or "") .. tostring(entry.context or "")
   end
 
-  local signature = string.format("debug:%s:%d:%s", uiState.debugLogType or "comm", #lines, lastSignaturePart)
+  local signature = string.format("debug:comm:%d:%s", #lines, lastSignaturePart)
   if frame.historyLastSignature == signature then
     frame.status:SetText(string.format("%s debug %s  Entries %d", config.label, config.enabled and "ON" or "OFF", #logs))
     return
@@ -1254,9 +1214,18 @@ function UI.Refresh()
   frame.onlyAddon.label:SetShown(rosterSelected)
   frame.searchBox:SetShown(rosterSelected)
   frame.refreshButton:SetShown(rosterSelected or debugSelected)
-  frame.debugTypeButton:SetShown(debugSelected)
+  frame.purgeButton:SetShown(rosterSelected)
   frame.debugToggleButton:SetShown(debugSelected)
   frame.debugClearButton:SetShown(debugSelected)
+
+  local remaining = REFRESH_COOLDOWN - math.floor(Utils.Now() - lastRefreshAt)
+  if remaining > 0 then
+    frame.refreshButton:SetText(string.format("Refresh (%ds)", remaining))
+    frame.refreshButton:Disable()
+  else
+    frame.refreshButton:SetText("Refresh")
+    frame.refreshButton:Enable()
+  end
   frame.chatInput:SetShown(historySelected)
   for _, header in ipairs(frame.rosterHeaders) do
     header:SetShown(rosterSelected)
@@ -1276,10 +1245,7 @@ function UI.Refresh()
   frame.emptyState:SetShown(rosterSelected)
 
   if debugSelected then
-    local debugLogType = uiState.debugLogType == "notice" and "notice" or "comm"
-    local debugEnabled = debugLogType == "notice" and Store.IsNoticeDebugEnabled() or Store.IsCommDebugEnabled()
-    frame.debugTypeButton:SetText(debugLogType == "notice" and "Log: Notice" or "Log: Comm")
-    frame.debugToggleButton:SetText(debugEnabled and "Disable" or "Enable")
+    frame.debugToggleButton:SetText(Store.IsCommDebugEnabled() and "Disable" or "Enable")
   end
 
   if rosterSelected then

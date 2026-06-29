@@ -42,24 +42,6 @@ local function requestBootstrapSync()
   ns.Comm.BroadcastHello()
 end
 
-local function getNoticeCandidateNames(playerName, playerName2)
-  local names = {}
-  local seen = {}
-
-  local function addName(name)
-    name = ns.Utils.NormalizeName(name)
-    if not name or seen[name] then
-      return
-    end
-
-    seen[name] = true
-    names[#names + 1] = name
-  end
-
-  addName(playerName)
-  addName(playerName2)
-  return names
-end
 
 local function refreshLocalProfile(shouldBroadcast)
   local profession1, profession2, profession1Icon, profession2Icon = ns.Utils.SafeProfessions()
@@ -112,28 +94,6 @@ local function printCommDebugLogs(limit)
   end
 end
 
-local function printNoticeDebugLogs(limit)
-  local logs = ns.Store.GetNoticeDebugLogs()
-  local count = #logs
-  limit = math.max(1, tonumber(limit) or 20)
-
-  ns.Utils.Print(string.format("notice debug logs: showing %d of %d", math.min(limit, count), count))
-  local startIndex = math.max(1, count - limit + 1)
-  for index = startIndex, count do
-    local entry = logs[index]
-    ns.Utils.Print(string.format(
-      "[%s] %s text=%s player=%s player2=%s channel=%s base=%s raw=%s",
-      date("%H:%M:%S", entry.at or ns.Utils.Now()),
-      tostring(entry.event or "?"),
-      tostring(entry.text or ""),
-      tostring(entry.playerName or ""),
-      tostring(entry.playerName2 or ""),
-      tostring(entry.channelName or ""),
-      tostring(entry.channelBaseName or ""),
-      tostring(entry.raw or "")
-    ))
-  end
-end
 
 local function handleDebugCommCommand(argument)
   argument = ns.Utils.Trim(argument or "")
@@ -170,63 +130,6 @@ local function handleDebugCommCommand(argument)
   ns.Utils.Print("usage: /sb debug comm on|off|show [n]|clear")
 end
 
-local function handleDebugNoticeCommand(argument)
-  argument = ns.Utils.Trim(argument or "")
-
-  if argument == "on" then
-    ns.Store.SetNoticeDebugEnabled(true)
-    ns.Utils.Print("notice debug enabled")
-    return
-  end
-
-  if argument == "off" then
-    ns.Store.SetNoticeDebugEnabled(false)
-    ns.Utils.Print("notice debug disabled")
-    return
-  end
-
-  if argument == "clear" then
-    ns.Store.ClearNoticeDebugLogs()
-    ns.Utils.Print("notice debug logs cleared")
-    return
-  end
-
-  if argument == "" or argument == "show" then
-    printNoticeDebugLogs(20)
-    return
-  end
-
-  local showLimit = string.match(argument, "^show%s+(%d+)$")
-  if showLimit then
-    printNoticeDebugLogs(tonumber(showLimit))
-    return
-  end
-
-  ns.Utils.Print("usage: /sb debug notice on|off|show [n]|clear")
-end
-
-local function logNoticeDebug(eventName, text, playerName, channelName, playerName2, channelBaseName)
-  if not ns.Store.IsNoticeDebugEnabled() then
-    return
-  end
-
-  ns.Store.AppendNoticeDebugLog({
-    at = ns.Utils.Now(),
-    event = eventName,
-    text = text,
-    playerName = playerName,
-    playerName2 = playerName2,
-    channelName = channelName,
-    channelBaseName = channelBaseName,
-    raw = table.concat({
-      tostring(text or ""),
-      tostring(playerName or ""),
-      tostring(channelName or ""),
-      tostring(playerName2 or ""),
-      tostring(channelBaseName or ""),
-    }, " | "),
-  })
-end
 
 
 local function handleSlashCommand(message)
@@ -237,10 +140,6 @@ local function handleSlashCommand(message)
     local subcommand, argument = string.match(debugCommand, "^(%S+)%s*(.-)$")
     if subcommand == "comm" then
       handleDebugCommCommand(argument)
-      return
-    end
-    if subcommand == "notice" then
-      handleDebugNoticeCommand(argument)
       return
     end
   end
@@ -323,51 +222,13 @@ Core:SetScript("OnEvent", function(_, event, ...)
     return
   end
 
-  if event == "CHANNEL_UI_UPDATE" or event == "CHAT_MSG_CHANNEL_NOTICE" or event == "CHAT_MSG_CHANNEL_NOTICE_USER" then
-    if event == "CHAT_MSG_CHANNEL_NOTICE" or event == "CHAT_MSG_CHANNEL_NOTICE_USER" then
-      -- args: text, playerName, _, channelName, playerName2, _, _, _, channelBaseName
-      local text, playerName, _, channelName, playerName2, _, _, _, channelBaseName = ...
-      logNoticeDebug(event, text, playerName, channelName, playerName2, channelBaseName)
-      if ns.Utils.IsTargetChannel(channelName, channelBaseName) and ns.Utils.IsJoinOrLeaveNotice(text) then
-        local now = ns.Utils.Now()
-
+  if event == "CHANNEL_UI_UPDATE" or event == "CHAT_MSG_CHANNEL_NOTICE" then
+    if event == "CHAT_MSG_CHANNEL_NOTICE" then
+      local text, _, _, channelName, _, _, _, _, channelBaseName = ...
+      if ns.Utils.IsTargetChannel(channelName, channelBaseName) then
         if (text == "YOU_JOINED" or text == "YOU_CHANGED") and not bootstrapHelloSent then
-          -- el timer de bootstrap aún no ha disparado; el canal ya está listo
           bootstrapHelloSent = true
           ns.Comm.BroadcastHello()
-        end
-
-        local names = getNoticeCandidateNames(playerName, playerName2)
-
-        for _, name in ipairs(names) do
-          if name ~= ns.Utils.PlayerName() then
-            if text == "JOINED" or text == "YOU_JOINED" or text == "YOU_CHANGED" or text == "CHANGED" then
-              local member, justJoined = ns.Store.MarkObservedByNotice(name, now)
-              if justJoined then
-                ns.History.Add("joined_channel", name)
-              end
-              if member and member.hasAddon then
-                ns.Comm.QueueProfileRequest(name)
-              else
-                ns.Comm.ProbeObservedPeer(name, now)
-              end
-            elseif text == "LEFT" or text == "YOU_LEFT" then
-              local member = ns.Store.GetMember(name)
-              if member then
-                if now > (member.lastSeenAt or 0) then
-                  member.lastSeenAt = now
-                end
-                if now > (member.lastObservedAt or 0) then
-                  member.lastObservedAt = now
-                end
-                if now > (member.lastObservedByNoticeAt or 0) then
-                  member.lastObservedByNoticeAt = now
-                end
-              end
-              ns.Store.MarkOffline(name)
-              ns.History.Add("left_channel", name)
-            end
-          end
         end
       end
     end
@@ -462,6 +323,8 @@ Core:SetScript("OnUpdate", function(_, elapsed)
   if ns.Channel.ShouldScan() then
     runScanAndRefresh()
   end
+
+  refreshUI()
 end)
 
 Core:RegisterEvent("PLAYER_LOGIN")
@@ -472,7 +335,6 @@ Core:RegisterEvent("PLAYER_LOGOUT")
 Core:RegisterEvent("SKILL_LINES_CHANGED")
 Core:RegisterEvent("CHANNEL_UI_UPDATE")
 Core:RegisterEvent("CHAT_MSG_CHANNEL_NOTICE")
-Core:RegisterEvent("CHAT_MSG_CHANNEL_NOTICE_USER")
 Core:RegisterEvent("CHAT_MSG_CHANNEL")
 Core:RegisterEvent("CHAT_MSG_ADDON")
 Core:RegisterEvent("WHO_LIST_UPDATE")

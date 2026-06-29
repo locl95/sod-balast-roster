@@ -114,8 +114,8 @@ function Who.HandleWhoListUpdate()
         }
       end
 
-      local member = Store.GetMember(name)
-      if member and member.name == name and member.isOnlineInChannel then
+      local member = Store.GetRoster()[name]
+      if member and member.isOnlineInChannel then
         applyWhoResult(name, guild, level, classFile, zone)
         applied = applied + 1
 

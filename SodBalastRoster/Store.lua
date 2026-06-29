@@ -35,8 +35,6 @@ local defaults = {
   debug = {
     commEnabled = false,
     commLogs = {},
-    noticeEnabled = false,
-    noticeLogs = {},
   },
 }
 
@@ -290,7 +288,7 @@ function Store.DowngradeMissingAddonResponses(timestamp)
 end
 
 function Store.MarkOffline(name)
-  local member = Store.GetMember(name)
+  local member = Store.GetRoster()[name]
   if not member or not member.isOnlineInChannel then
     return nil, false
   end
@@ -607,37 +605,22 @@ function Store.AppendCommDebugLog(entry)
   Store.GetDebugState().commLogs = trimmed
 end
 
-function Store.IsNoticeDebugEnabled()
-  return Store.GetDebugState().noticeEnabled and true or false
-end
-
-function Store.SetNoticeDebugEnabled(enabled)
-  Store.GetDebugState().noticeEnabled = enabled and true or false
-end
-
-function Store.GetNoticeDebugLogs()
-  return Store.GetDebugState().noticeLogs
-end
-
-function Store.ClearNoticeDebugLogs()
-  Store.GetDebugState().noticeLogs = {}
-end
-
-function Store.AppendNoticeDebugLog(entry)
-  local logs = Store.GetNoticeDebugLogs()
-  logs[#logs + 1] = entry
-
-  local limit = 200
-  if #logs <= limit then
-    return
+function Store.PurgeBlanks()
+  local roster = Store.GetRoster()
+  local count = 0
+  for name, member in pairs(roster) do
+    if not member.hasAddon
+      and not member.isOnlineInChannel
+      and not member.observedByChat
+      and not member.observedByNotice
+      and not member.observedByWho
+      and (member.firstSeenAt or 0) == 0
+    then
+      roster[name] = nil
+      count = count + 1
+    end
   end
-
-  local trimmed = {}
-  local startIndex = #logs - limit + 1
-  for index = startIndex, #logs do
-    trimmed[#trimmed + 1] = logs[index]
-  end
-  Store.GetDebugState().noticeLogs = trimmed
+  return count
 end
 
 function Store.GetLatestRosterUpdatedAt()

@@ -312,9 +312,6 @@ function Utils.IsTargetChannel(channelName, channelBaseName)
   return string.find(full, target, 1, true) ~= nil
 end
 
-function Utils.IsJoinOrLeaveNotice(text)
-  return text == "JOINED" or text == "LEFT" or text == "YOU_JOINED" or text == "YOU_LEFT" or text == "YOU_CHANGED" or text == "CHANGED"
-end
 
 function Utils.EscapeField(value)
   value = tostring(value or "")
