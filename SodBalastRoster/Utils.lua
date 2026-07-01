@@ -309,17 +309,26 @@ function Utils.SplitNameRealm(fullName)
   return name, realm
 end
 
-function Utils.PlayerRealmSuffix()
-  local _, realm = Utils.SplitNameRealm(Utils.PlayerName())
-  return realm
-end
-
 function Utils.RealmName()
   if not GetRealmName then
     return "unknown"
   end
 
   return Utils.Trim(GetRealmName() or "")
+end
+
+function Utils.PlayerRealmSuffix()
+  local realm = Utils.RealmName()
+  if not realm or realm == "" or realm == "unknown" then
+    return nil
+  end
+
+  local suffix = (realm:gsub("%s+", ""))
+  if suffix == "" then
+    return nil
+  end
+
+  return suffix
 end
 
 function Utils.StorageScopeKey()

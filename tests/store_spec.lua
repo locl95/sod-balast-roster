@@ -80,19 +80,22 @@ end)
 
 test("Store.PurgeWrongRealmMembers removes entries synced from a different realm", function(t)
   local ctx = t.newContext()
-  ctx.ns.Utils.PlayerName = function()
-    return "Tester-WildGrowth"
-  end
+  ctx.env.realmName = "Wild Growth"
+
+  t.assertEqual(ctx.ns.Utils.PlayerRealmSuffix(), "WildGrowth")
 
   ctx.ns.Store.GetMember("SameRealmFriend")
-  ctx.ns.Store.GetMember("Bob-LivingFlame")
+  ctx.ns.Store.GetMember("Alice-WildGrowth")
+  ctx.ns.Store.GetMember("Mongooser-LivingFlame")
 
   t.assertFalse(ctx.ns.Store.IsWrongRealmMember(ctx.ns.Store.GetMember("SameRealmFriend")))
-  t.assertTrue(ctx.ns.Store.IsWrongRealmMember(ctx.ns.Store.GetMember("Bob-LivingFlame")))
+  t.assertFalse(ctx.ns.Store.IsWrongRealmMember(ctx.ns.Store.GetMember("Alice-WildGrowth")))
+  t.assertTrue(ctx.ns.Store.IsWrongRealmMember(ctx.ns.Store.GetMember("Mongooser-LivingFlame")))
 
   local removed = ctx.ns.Store.PurgeWrongRealmMembers()
 
   t.assertEqual(removed, 1)
   t.assertTrue(ctx.ns.Store.GetRoster().SameRealmFriend ~= nil)
-  t.assertNil(ctx.ns.Store.GetRoster()["Bob-LivingFlame"])
+  t.assertTrue(ctx.ns.Store.GetRoster()["Alice-WildGrowth"] ~= nil)
+  t.assertNil(ctx.ns.Store.GetRoster()["Mongooser-LivingFlame"])
 end)
