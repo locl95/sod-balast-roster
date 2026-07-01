@@ -36,17 +36,31 @@ local function buildChannelMessageId(name, details, lineId, at)
   return string.format("chan:%s:%s:%s", Utils.NormalizeName(name) or "?", Utils.Trim(details or ""), bucket)
 end
 
--- Devuelve la entrada equivalente (mismo sender, mismo texto, ±2s) o nil.
-local function findEquivalentChannelMessage(name, details, at)
+local function isRelayedChannelMessage(name, source)
+  local normalizedName = Utils.NormalizeName(name) or "?"
+  local normalizedSource = Utils.NormalizeName(source) or "?"
+  return normalizedSource ~= normalizedName
+end
+
+-- Devuelve la entrada equivalente o nil.
+-- Los mensajes relayed por sync pueden llegar con varios segundos de skew entre peers,
+-- asi que usamos una tolerancia mayor solo en ese caso.
+local function findEquivalentChannelMessage(name, details, at, source)
   local normalizedName = Utils.NormalizeName(name) or "?"
   details = Utils.Trim(details or "")
   at = tonumber(at) or 0
+  local candidateIsRelayed = isRelayedChannelMessage(normalizedName, source)
 
   for _, entry in ipairs(ns.db.history) do
+    local tolerance = 2
+    if candidateIsRelayed or isRelayedChannelMessage(entry.name, entry.source) then
+      tolerance = 5
+    end
+
     if entry.type == "channel_message"
       and (Utils.NormalizeName(entry.name) or "?") == normalizedName
       and Utils.Trim(entry.details or "") == details
-      and math.abs((tonumber(entry.at) or 0) - at) <= 2 then
+      and math.abs((tonumber(entry.at) or 0) - at) <= tolerance then
       return entry
     end
   end
@@ -130,7 +144,7 @@ function History.AddImported(entry)
   end
 
   if entry.type == "channel_message" then
-    local equivalent = findEquivalentChannelMessage(entry.name, entry.details, entry.at)
+    local equivalent = findEquivalentChannelMessage(entry.name, entry.details, entry.at, entry.source)
     if equivalent then
       -- Si el incoming tiene ID canonico (lineId) y el existente tiene un ID hash,
       -- promover el existente al ID canonico para que los CSUM converjan.
@@ -162,7 +176,7 @@ function History.AddChannelMessage(sender, message, lineId)
   end
 
   local now = Utils.Now()
-  if findEquivalentChannelMessage(sender, message, now) then
+  if findEquivalentChannelMessage(sender, message, now, sender) then
     return nil
   end
 

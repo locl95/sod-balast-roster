@@ -34,6 +34,38 @@ test("History.AddImported deduplicates equivalent remote chat messages", functio
   t.assertEqual(#ctx.ns.History.GetEntries(), 1)
 end)
 
+test("History.AddImported deduplicates relayed chat messages with small peer clock skew", function(t)
+  local ctx = t.newContext()
+  ctx.setNow(1000)
+  ctx.ns.History.AddChannelMessage("Alice", "same text", 10)
+
+  local imported, added = ctx.ns.History.AddImported({
+    id = "remote:skew",
+    source = "Remote",
+    name = "Alice",
+    type = "channel_message",
+    details = "same text",
+    at = 1004,
+  })
+
+  t.assertNil(imported)
+  t.assertEqual(added, false)
+  t.assertEqual(#ctx.ns.History.GetEntries(), 1)
+end)
+
+test("History.AddChannelMessage still keeps distinct repeated local messages", function(t)
+  local ctx = t.newContext()
+  ctx.setNow(1200)
+  local first = ctx.ns.History.AddChannelMessage("Alice", "same text", 10)
+
+  ctx.setNow(1204)
+  local second = ctx.ns.History.AddChannelMessage("Alice", "same text", 11)
+
+  t.assertTrue(first ~= nil)
+  t.assertTrue(second ~= nil)
+  t.assertEqual(#ctx.ns.History.GetEntries(), 2)
+end)
+
 test("History.AddImported promotes hash ID to canonical lineId on content match", function(t)
   local ctx = t.newContext()
   ctx.setNow(800)
