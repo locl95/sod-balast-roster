@@ -77,3 +77,22 @@ test("Store.PurgeLegacyData removes unscoped data left by pre-scoping saved vari
   t.assertTrue(_G.SodBalastRosterDB.scopes ~= nil)
   t.assertTrue(ctx.ns.Store.GetRoster().SoDPlayer ~= nil)
 end)
+
+test("Store.PurgeWrongRealmMembers removes entries synced from a different realm", function(t)
+  local ctx = t.newContext()
+  ctx.ns.Utils.PlayerName = function()
+    return "Tester-WildGrowth"
+  end
+
+  ctx.ns.Store.GetMember("SameRealmFriend")
+  ctx.ns.Store.GetMember("Bob-LivingFlame")
+
+  t.assertFalse(ctx.ns.Store.IsWrongRealmMember(ctx.ns.Store.GetMember("SameRealmFriend")))
+  t.assertTrue(ctx.ns.Store.IsWrongRealmMember(ctx.ns.Store.GetMember("Bob-LivingFlame")))
+
+  local removed = ctx.ns.Store.PurgeWrongRealmMembers()
+
+  t.assertEqual(removed, 1)
+  t.assertTrue(ctx.ns.Store.GetRoster().SameRealmFriend ~= nil)
+  t.assertNil(ctx.ns.Store.GetRoster()["Bob-LivingFlame"])
+end)

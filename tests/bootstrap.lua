@@ -4,12 +4,21 @@ local function installGlobals(env)
   _G.__SBR_TEST_ENV = env
   _G.SodBalastRosterDB = nil
   _G.max = math.max
-  _G.Ambiguate = function(name)
+  _G.Ambiguate = function(name, style)
     if not name then
       return nil
     end
 
-    return tostring(name):match("^[^-]+") or tostring(name)
+    name = tostring(name)
+    if not name:find("-") then
+      return name
+    end
+
+    if style == "none" then
+      return name
+    end
+
+    return name:match("^[^-]+") or name
   end
   _G.UnitName = function(unit)
     if unit == "player" then

@@ -658,6 +658,30 @@ function Store.PurgeLegacyData()
   return removed
 end
 
+function Store.IsWrongRealmMember(member)
+  local myRealm = Utils.PlayerRealmSuffix()
+  if not myRealm or not member then
+    return false
+  end
+
+  local _, realm = Utils.SplitNameRealm(member.name)
+  return realm ~= nil and realm ~= myRealm
+end
+
+function Store.PurgeWrongRealmMembers()
+  local roster = Store.GetRoster()
+  local removed = 0
+
+  for name, member in pairs(roster) do
+    if Store.IsWrongRealmMember(member) then
+      roster[name] = nil
+      removed = removed + 1
+    end
+  end
+
+  return removed
+end
+
 function Store.GetLatestRosterUpdatedAt()
   local latest = 0
   for _, member in pairs(Store.GetRoster()) do

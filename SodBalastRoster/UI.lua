@@ -18,12 +18,14 @@ local REFRESH_COOLDOWN = 15
 local lastRefreshAt = 0
 
 StaticPopupDialogs["SODBALASTROSTER_PURGE_LEGACY"] = {
-  text = "Delete old roster data stored before per-server saving? This cannot be undone.",
+  text = "Delete old roster data saved before per-server storage, and entries synced from other servers? This cannot be undone.",
   button1 = "Delete",
   button2 = "Cancel",
   OnAccept = function()
-    Store.PurgeLegacyData()
-    ns.Utils.Print("Old (non per-server) roster data deleted.")
+    local legacyRemoved = Store.PurgeLegacyData()
+    local wrongRealmRemoved = Store.PurgeWrongRealmMembers()
+    ns.Utils.Print(string.format("Deleted legacy data (%d key(s)) and %d other-server member(s).", legacyRemoved, wrongRealmRemoved))
+    UI.Refresh()
   end,
   timeout = 0,
   whileDead = true,
@@ -835,7 +837,7 @@ function UI.Create()
   frame.purgeLegacyButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
   frame.purgeLegacyButton:SetSize(90, 20)
   frame.purgeLegacyButton:SetPoint("LEFT", frame.purgeButton, "RIGHT", 8, 0)
-  frame.purgeLegacyButton:SetText("Del. old data")
+  frame.purgeLegacyButton:SetText("Purge legacy")
   frame.purgeLegacyButton:SetScript("OnClick", function()
     StaticPopup_Show("SODBALASTROSTER_PURGE_LEGACY")
   end)
@@ -1237,7 +1239,7 @@ function UI.Refresh()
   frame.searchBox:SetShown(rosterSelected)
   frame.refreshButton:SetShown(rosterSelected or debugSelected)
   frame.purgeButton:SetShown(rosterSelected)
-  frame.purgeLegacyButton:SetShown(rosterSelected and Store.HasLegacyData())
+  frame.purgeLegacyButton:SetShown(rosterSelected)
   frame.debugToggleButton:SetShown(debugSelected)
   frame.debugClearButton:SetShown(debugSelected)
 
