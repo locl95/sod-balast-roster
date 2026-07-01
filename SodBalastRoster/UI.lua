@@ -17,6 +17,20 @@ local REFRESH_COOLDOWN = 15
 
 local lastRefreshAt = 0
 
+StaticPopupDialogs["SODBALASTROSTER_PURGE_LEGACY"] = {
+  text = "Delete old roster data stored before per-server saving? This cannot be undone.",
+  button1 = "Delete",
+  button2 = "Cancel",
+  OnAccept = function()
+    Store.PurgeLegacyData()
+    ns.Utils.Print("Old (non per-server) roster data deleted.")
+  end,
+  timeout = 0,
+  whileDead = true,
+  hideOnEscape = true,
+  preferredIndex = 3,
+}
+
 local TAB_TEXTURES = {
   [TAB_ROSTER] = "Interface\\Icons\\Achievement_GuildPerk_EverybodysFriend",
   [TAB_HISTORY] = "Interface\\ChatFrame\\UI-ChatIcon-Chat-Up",
@@ -818,9 +832,17 @@ function UI.Create()
     UI.Refresh()
   end)
 
+  frame.purgeLegacyButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+  frame.purgeLegacyButton:SetSize(90, 20)
+  frame.purgeLegacyButton:SetPoint("LEFT", frame.purgeButton, "RIGHT", 8, 0)
+  frame.purgeLegacyButton:SetText("Del. old data")
+  frame.purgeLegacyButton:SetScript("OnClick", function()
+    StaticPopup_Show("SODBALASTROSTER_PURGE_LEGACY")
+  end)
+
   frame.debugToggleButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
   frame.debugToggleButton:SetSize(80, 20)
-  frame.debugToggleButton:SetPoint("LEFT", frame.purgeButton, "RIGHT", 8, 0)
+  frame.debugToggleButton:SetPoint("LEFT", frame.purgeLegacyButton, "RIGHT", 8, 0)
   frame.debugToggleButton:SetScript("OnClick", function()
     Store.SetCommDebugEnabled(not Store.IsCommDebugEnabled())
     UI.Refresh()
@@ -1215,6 +1237,7 @@ function UI.Refresh()
   frame.searchBox:SetShown(rosterSelected)
   frame.refreshButton:SetShown(rosterSelected or debugSelected)
   frame.purgeButton:SetShown(rosterSelected)
+  frame.purgeLegacyButton:SetShown(rosterSelected and Store.HasLegacyData())
   frame.debugToggleButton:SetShown(debugSelected)
   frame.debugClearButton:SetShown(debugSelected)
 

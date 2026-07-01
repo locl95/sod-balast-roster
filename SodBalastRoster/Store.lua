@@ -628,6 +628,36 @@ function Store.PurgeBlanks()
   return count
 end
 
+function Store.HasLegacyData()
+  if not SodBalastRosterDB then
+    return false
+  end
+
+  for key in pairs(SodBalastRosterDB) do
+    if key ~= "scopes" then
+      return true
+    end
+  end
+
+  return false
+end
+
+function Store.PurgeLegacyData()
+  if not SodBalastRosterDB then
+    return 0
+  end
+
+  local removed = 0
+  for key in pairs(SodBalastRosterDB) do
+    if key ~= "scopes" then
+      SodBalastRosterDB[key] = nil
+      removed = removed + 1
+    end
+  end
+
+  return removed
+end
+
 function Store.GetLatestRosterUpdatedAt()
   local latest = 0
   for _, member in pairs(Store.GetRoster()) do

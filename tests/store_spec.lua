@@ -60,3 +60,20 @@ test("Store.Init scopes saved variables by project and realm", function(t)
   t.assertTrue(ctx.ns.Store.GetRoster().SoDPlayer ~= nil)
   t.assertNil(ctx.ns.Store.GetRoster().HardcorePlayer)
 end)
+
+test("Store.PurgeLegacyData removes unscoped data left by pre-scoping saved variables", function(t)
+  local ctx = t.newContext()
+
+  ctx.ns.Store.GetMember("SoDPlayer")
+  t.assertFalse(ctx.ns.Store.HasLegacyData())
+
+  _G.SodBalastRosterDB.roster = { LegacyPlayer = { name = "LegacyPlayer" } }
+
+  t.assertTrue(ctx.ns.Store.HasLegacyData())
+
+  local removed = ctx.ns.Store.PurgeLegacyData()
+  t.assertTrue(removed > 0)
+  t.assertFalse(ctx.ns.Store.HasLegacyData())
+  t.assertTrue(_G.SodBalastRosterDB.scopes ~= nil)
+  t.assertTrue(ctx.ns.Store.GetRoster().SoDPlayer ~= nil)
+end)
