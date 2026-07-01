@@ -51,8 +51,13 @@ end
 
 function Store.Init()
   SodBalastRosterDB = SodBalastRosterDB or {}
-  copyDefaults(SodBalastRosterDB, defaults)
-  ns.db = SodBalastRosterDB
+  SodBalastRosterDB.scopes = SodBalastRosterDB.scopes or {}
+
+  local scopeKey = Utils.StorageScopeKey()
+  SodBalastRosterDB.scopes[scopeKey] = SodBalastRosterDB.scopes[scopeKey] or {}
+  copyDefaults(SodBalastRosterDB.scopes[scopeKey], defaults)
+
+  ns.db = SodBalastRosterDB.scopes[scopeKey]
 end
 
 function Store.GetDB()

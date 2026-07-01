@@ -18,6 +18,9 @@ local function installGlobals(env)
 
     return nil
   end
+  _G.GetRealmName = function()
+    return env.realmName or "Wild Growth"
+  end
   _G.time = function()
     return env.now
   end
@@ -100,6 +103,7 @@ local function installGlobals(env)
     AddMessage = function()
     end,
   }
+  _G.WOW_PROJECT_ID = env.projectId or 11
 end
 
 local function loadAddonFile(path, ns)
@@ -111,6 +115,8 @@ function Bootstrap.newContext()
   local env = {
     now = 1000,
     playerName = "Tester",
+    realmName = "Wild Growth",
+    projectId = 11,
     classFile = "WARRIOR",
     zoneName = "Durotar",
     guildName = "Raiders",

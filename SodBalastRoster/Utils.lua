@@ -296,6 +296,24 @@ function Utils.PlayerName()
   return Utils.NormalizeName(UnitName("player"))
 end
 
+function Utils.RealmName()
+  if not GetRealmName then
+    return "unknown"
+  end
+
+  return Utils.Trim(GetRealmName() or "")
+end
+
+function Utils.StorageScopeKey()
+  local projectId = tostring(WOW_PROJECT_ID or "unknown")
+  local realmName = string.lower(Utils.RealmName())
+  if realmName == "" then
+    realmName = "unknown"
+  end
+
+  return string.format("%s:%s", projectId, realmName)
+end
+
 function Utils.IsTargetChannel(channelName, channelBaseName)
   local target = string.lower(ns.Constants.channelName or "")
   local base = string.lower(channelBaseName or "")
