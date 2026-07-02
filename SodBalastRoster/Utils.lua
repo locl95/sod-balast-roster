@@ -127,6 +127,40 @@ function Utils.SafeSpec()
   return name or "", icon or ""
 end
 
+function Utils.DebugSpec()
+  local lines = {}
+
+  lines[#lines + 1] = string.format(
+    "GetNumTalentTabs=%s GetTalentTabInfo=%s",
+    tostring(GetNumTalentTabs ~= nil),
+    tostring(GetTalentTabInfo ~= nil)
+  )
+
+  if GetNumTalentTabs then
+    local ok, numTabs = pcall(GetNumTalentTabs)
+    lines[#lines + 1] = string.format("GetNumTalentTabs() ok=%s value=%s", tostring(ok), tostring(numTabs))
+
+    if ok and GetTalentTabInfo then
+      for tab = 1, tonumber(numTabs) or 0 do
+        local okTab, name, icon, pointsSpent = pcall(GetTalentTabInfo, tab)
+        lines[#lines + 1] = string.format(
+          "GetTalentTabInfo(%d) ok=%s name=%s icon=%s pointsSpent=%s",
+          tab,
+          tostring(okTab),
+          tostring(name),
+          tostring(icon),
+          tostring(pointsSpent)
+        )
+      end
+    end
+  end
+
+  local spec, specIcon = Utils.SafeSpec()
+  lines[#lines + 1] = string.format("SafeSpec name=%s icon=%s", tostring(spec), tostring(specIcon))
+
+  return lines
+end
+
 function Utils.ResolveProfessionIcon(name, icon)
   if icon and icon ~= 0 and icon ~= "" then
     return tonumber(icon) or icon

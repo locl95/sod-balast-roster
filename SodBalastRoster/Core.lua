@@ -145,6 +145,13 @@ local function handleSlashCommand(message)
       handleDebugCommCommand(argument)
       return
     end
+
+    if subcommand == "spec" then
+      for _, line in ipairs(ns.Utils.DebugSpec()) do
+        ns.Utils.Print(line)
+      end
+      return
+    end
   end
 
   local frame = safeCreateUI()
