@@ -467,7 +467,7 @@ end
 local function createRow(parent, index)
   local row = CreateFrame("Button", nil, parent)
   row.isRosterRow = true
-  row:SetSize(882, ROW_HEIGHT)
+  row:SetSize(814, ROW_HEIGHT)
   row:SetPoint("TOPLEFT", parent, "TOPLEFT", 8, -120 - ((index - 1) * ROW_HEIGHT))
   row:EnableMouse(true)
   row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
@@ -508,10 +508,10 @@ local function createRow(parent, index)
   row.level = createLabel(row, 40, "LEFT")
   row.level:SetPoint("LEFT", row.name, "RIGHT", 4, 0)
 
-  row.class = createLabel(row, 90, "LEFT")
+  row.class = createLabel(row, 26, "LEFT")
   row.class:SetPoint("LEFT", row.level, "RIGHT", 4, 0)
 
-  row.spec = createLabel(row, 30, "LEFT")
+  row.spec = createLabel(row, 26, "LEFT")
   row.spec:SetPoint("LEFT", row.class, "RIGHT", 4, 0)
 
   row.zone = createLabel(row, 170, "LEFT")
@@ -755,7 +755,7 @@ function UI.Create()
 
   local state = Store.GetUIState()
   local frame = CreateFrame("Frame", "SodBalastRosterFrame", UIParent, "BasicFrameTemplateWithInset")
-  frame:SetSize(state.width or 894, state.height or 420)
+  frame:SetSize(state.width or 826, state.height or 420)
   frame:SetPoint(state.point or "CENTER", UIParent, state.relativePoint or state.point or "CENTER", state.x or 0, state.y or 0)
   frame:SetMovable(true)
   frame:EnableMouse(true)
@@ -887,12 +887,12 @@ function UI.Create()
     { text = "A", x = 12, width = 28 },
     { text = "Name", x = 44, width = 150 },
     { text = "Lvl", x = 198, width = 40 },
-    { text = "Class", x = 242, width = 90 },
-    { text = "Spec", x = 336, width = 30 },
-    { text = "Zone", x = 370, width = 170 },
-    { text = "Guild", x = 544, width = 130 },
-    { text = "Profs", x = 678, width = 130 },
-    { text = "Last Seen", x = 812, width = 70 },
+    { text = "Class", x = 242, width = 26 },
+    { text = "Spec", x = 272, width = 26 },
+    { text = "Zone", x = 302, width = 170 },
+    { text = "Guild", x = 476, width = 130 },
+    { text = "Profs", x = 610, width = 130 },
+    { text = "Last Seen", x = 744, width = 70 },
   }
 
   for _, header in ipairs(headers) do

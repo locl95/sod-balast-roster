@@ -98,11 +98,7 @@ function Utils.SafeLevel()
   return UnitLevel("player") or 0
 end
 
-function Utils.SafeSpec()
-  if not (GetNumTalentTabs and GetTalentTabInfo) then
-    return "", ""
-  end
-
+local function computeSpec()
   local bestName, bestIcon, bestPoints = "", "", 0
   for tab = 1, GetNumTalentTabs() do
     local name, icon, pointsSpent = GetTalentTabInfo(tab)
@@ -116,6 +112,19 @@ function Utils.SafeSpec()
   end
 
   return bestName, bestIcon
+end
+
+function Utils.SafeSpec()
+  if not (GetNumTalentTabs and GetTalentTabInfo) then
+    return "", ""
+  end
+
+  local ok, name, icon = pcall(computeSpec)
+  if not ok then
+    return "", ""
+  end
+
+  return name or "", icon or ""
 end
 
 function Utils.ResolveProfessionIcon(name, icon)
