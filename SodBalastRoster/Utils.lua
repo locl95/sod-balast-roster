@@ -101,7 +101,9 @@ end
 local function computeSpec()
   local bestName, bestIcon, bestPoints = "", "", 0
   for tab = 1, GetNumTalentTabs() do
-    local name, icon, pointsSpent = GetTalentTabInfo(tab)
+    -- SoD anadio "id" y "description" al frente/medio de la tupla en el patch 4.4.0 (2024-04-30):
+    -- id, name, description, icon, pointsSpent, ... = GetTalentTabInfo(tab)
+    local _, name, _, icon, pointsSpent = GetTalentTabInfo(tab)
     if name and (pointsSpent or 0) > bestPoints then
       bestName, bestIcon, bestPoints = name, icon, pointsSpent
     end
@@ -142,12 +144,14 @@ function Utils.DebugSpec()
 
     if ok and GetTalentTabInfo then
       for tab = 1, tonumber(numTabs) or 0 do
-        local okTab, name, icon, pointsSpent = pcall(GetTalentTabInfo, tab)
+        local okTab, id, name, description, icon, pointsSpent = pcall(GetTalentTabInfo, tab)
         lines[#lines + 1] = string.format(
-          "GetTalentTabInfo(%d) ok=%s name=%s icon=%s pointsSpent=%s",
+          "GetTalentTabInfo(%d) ok=%s id=%s name=%s description=%s icon=%s pointsSpent=%s",
           tab,
           tostring(okTab),
+          tostring(id),
           tostring(name),
+          tostring(description),
           tostring(icon),
           tostring(pointsSpent)
         )
