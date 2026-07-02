@@ -53,6 +53,25 @@ test("History.AddImported deduplicates relayed chat messages with small peer clo
   t.assertEqual(#ctx.ns.History.GetEntries(), 1)
 end)
 
+test("History.AddImported deduplicates relayed messages even when source equals author (real wire shape)", function(t)
+  local ctx = t.newContext()
+  ctx.setNow(2000)
+  ctx.ns.History.AddChannelMessage("Alice", "same text", nil)
+
+  local imported, added = ctx.ns.History.AddImported({
+    id = "remote:realshape",
+    source = "Alice", -- igual que name, como ocurre siempre en produccion
+    name = "Alice",
+    type = "channel_message",
+    details = "same text",
+    at = 2006,
+  })
+
+  t.assertNil(imported)
+  t.assertEqual(added, false)
+  t.assertEqual(#ctx.ns.History.GetEntries(), 1)
+end)
+
 test("History.AddChannelMessage still keeps distinct repeated local messages", function(t)
   local ctx = t.newContext()
   ctx.setNow(1200)
