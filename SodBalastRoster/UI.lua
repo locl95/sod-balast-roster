@@ -445,6 +445,12 @@ local function setRowTexts(row, member)
     row.class:SetText(member.classFile ~= "" and member.classFile or "?")
   end
 
+  if member.specIcon and member.specIcon ~= "" and tostring(member.specIcon) ~= "0" then
+    row.spec:SetText(string.format("|T%s:14:14:0:0|t", tostring(member.specIcon)))
+  else
+    row.spec:SetText("")
+  end
+
   row.zone:SetText(member.zone ~= "" and member.zone or "?")
   row.guild:SetText(member.guildName ~= "" and member.guildName or "?")
   local professions = member.hasAddon and "-" or "?"
@@ -461,7 +467,7 @@ end
 local function createRow(parent, index)
   local row = CreateFrame("Button", nil, parent)
   row.isRosterRow = true
-  row:SetSize(848, ROW_HEIGHT)
+  row:SetSize(882, ROW_HEIGHT)
   row:SetPoint("TOPLEFT", parent, "TOPLEFT", 8, -120 - ((index - 1) * ROW_HEIGHT))
   row:EnableMouse(true)
   row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
@@ -505,8 +511,11 @@ local function createRow(parent, index)
   row.class = createLabel(row, 90, "LEFT")
   row.class:SetPoint("LEFT", row.level, "RIGHT", 4, 0)
 
+  row.spec = createLabel(row, 30, "LEFT")
+  row.spec:SetPoint("LEFT", row.class, "RIGHT", 4, 0)
+
   row.zone = createLabel(row, 170, "LEFT")
-  row.zone:SetPoint("LEFT", row.class, "RIGHT", 4, 0)
+  row.zone:SetPoint("LEFT", row.spec, "RIGHT", 4, 0)
 
   row.guild = createLabel(row, 130, "LEFT")
   row.guild:SetPoint("LEFT", row.zone, "RIGHT", 4, 0)
@@ -526,6 +535,9 @@ local function createRow(parent, index)
 
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     GameTooltip:SetText(self.member.name or "?")
+    if self.member.spec and self.member.spec ~= "" then
+      GameTooltip:AddLine(self.member.spec, 1, 1, 1)
+    end
     if self.member.hasAddon then
       GameTooltip:AddLine("Addon peer", 0.6, 1, 0.6)
       GameTooltip:AddLine("Presence and sync are reliable.", 1, 1, 1)
@@ -743,7 +755,7 @@ function UI.Create()
 
   local state = Store.GetUIState()
   local frame = CreateFrame("Frame", "SodBalastRosterFrame", UIParent, "BasicFrameTemplateWithInset")
-  frame:SetSize(state.width or 860, state.height or 420)
+  frame:SetSize(state.width or 894, state.height or 420)
   frame:SetPoint(state.point or "CENTER", UIParent, state.relativePoint or state.point or "CENTER", state.x or 0, state.y or 0)
   frame:SetMovable(true)
   frame:EnableMouse(true)
@@ -876,10 +888,11 @@ function UI.Create()
     { text = "Name", x = 44, width = 150 },
     { text = "Lvl", x = 198, width = 40 },
     { text = "Class", x = 242, width = 90 },
-    { text = "Zone", x = 336, width = 170 },
-    { text = "Guild", x = 510, width = 130 },
-    { text = "Profs", x = 644, width = 130 },
-    { text = "Last Seen", x = 778, width = 70 },
+    { text = "Spec", x = 336, width = 30 },
+    { text = "Zone", x = 370, width = 170 },
+    { text = "Guild", x = 544, width = 130 },
+    { text = "Profs", x = 678, width = 130 },
+    { text = "Last Seen", x = 812, width = 70 },
   }
 
   for _, header in ipairs(headers) do

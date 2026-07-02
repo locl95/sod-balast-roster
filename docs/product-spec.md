@@ -25,6 +25,7 @@ Construir una mini guild virtual basada en el canal `SODBALAST` con una interfaz
 3. Mostrar metadatos de los personajes con addon:
    - nivel
    - clase
+   - spec (arbol de talentos dominante)
    - zona
    - guild real
 4. Mantener un historico local de entradas y salidas del canal.
@@ -54,7 +55,7 @@ Consecuencias:
 ## Casos de uso principales
 
 1. Como jugador de BALAST quiero abrir una ventana y ver quien esta en `SODBALAST` para saber con quien puedo jugar o hablar.
-2. Como jugador quiero ver el nivel, clase, zona y guild de quien tenga addon para priorizar whispers e invites.
+2. Como jugador quiero ver el nivel, clase, spec, zona y guild de quien tenga addon para priorizar whispers e invites.
 3. Como jugador quiero ver cuando aparecio o desaparecio alguien del canal para tener algo de historico.
 4. Como jugador quiero filtrar la lista por online, por addon y por nombre.
 

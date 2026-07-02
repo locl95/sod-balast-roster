@@ -124,6 +124,36 @@ test("Comm.HandleAddonMessage preserves empty INFO fields without shifting adver
   t.assertEqual(member.lastHistoryAdvertisedAt, 1782588517)
 end)
 
+test("Comm.HandleAddonMessage parses trailing INFO spec fields", function(t)
+  local ctx = t.newContext()
+
+  ctx.ns.Comm.HandleAddonMessage(
+    "SBRoster",
+    "INFO;4;Cursefettfr;25;WARLOCK;Tirisfal Glades;F R E S H V;Alchemy;Herbalism;136240;;1782588517;;Arms;136241",
+    "WHISPER",
+    "Cursefettfr"
+  )
+
+  local member = ctx.ns.Store.GetMember("Cursefettfr")
+  t.assertEqual(member.spec, "Arms")
+  t.assertEqual(member.specIcon, "136241")
+end)
+
+test("Comm.HandleAddonMessage defaults spec to empty when INFO omits trailing fields", function(t)
+  local ctx = t.newContext()
+
+  ctx.ns.Comm.HandleAddonMessage(
+    "SBRoster",
+    "INFO;4;Cursefettfr;25;WARLOCK;Tirisfal Glades;F R E S H V;Alchemy;Herbalism;136240;;1782588517",
+    "WHISPER",
+    "Cursefettfr"
+  )
+
+  local member = ctx.ns.Store.GetMember("Cursefettfr")
+  t.assertEqual(member.spec, "")
+  t.assertEqual(member.specIcon, "")
+end)
+
 test("Comm.HandleRosterProfile preserves empty RPRO fields without shifting timestamps", function(t)
   local ctx = t.newContext()
 
@@ -151,6 +181,35 @@ test("Comm.HandleRosterProfile preserves empty RPRO fields without shifting time
   t.assertEqual(member.profession2Icon, "")
   t.assertEqual(member.lastSeenAt, 1782591250)
   t.assertEqual(member.lastProfileAt, 1782591208)
+  t.assertEqual(member.spec, "")
+  t.assertEqual(member.specIcon, "")
+end)
+
+test("Comm.HandleRosterProfile parses trailing RPRO spec fields", function(t)
+  local ctx = t.newContext()
+
+  ctx.ns.Comm.HandleRosterProfile({
+    "RPRO",
+    "4",
+    "Cursefettfr",
+    "1",
+    "25",
+    "WARLOCK",
+    "Tirisfal Glades",
+    "F R E S H V",
+    "Alchemy",
+    "Herbalism",
+    "136240",
+    "",
+    "1782591250",
+    "1782591208",
+    "Arms",
+    "136241",
+  }, "Cursefettfr")
+
+  local member = ctx.ns.Store.GetMember("Cursefettfr")
+  t.assertEqual(member.spec, "Arms")
+  t.assertEqual(member.specIcon, "136241")
 end)
 
 test("Comm.HandleChatSummary skips CREQ when local has strictly more messages (superset guard)", function(t)

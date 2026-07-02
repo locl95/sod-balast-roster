@@ -101,6 +101,8 @@ local function encodeRosterProfile(member)
     tostring(member.profession2Icon or ""),
     tostring(member.lastSeenAt or 0),
     tostring(member.lastUpdatedAt or 0),
+    Utils.EscapeField(member.spec or ""),
+    tostring(member.specIcon or ""),
   }, ";")
 end
 
@@ -206,6 +208,7 @@ function Comm.SendInfo(target)
 
   local playerName = Utils.PlayerName() or ""
   local profession1, profession2, profession1Icon, profession2Icon = Utils.SafeProfessions()
+  local spec, specIcon = Utils.SafeSpec()
 
   local onlinePeers = Store.GetOnlineAddonMembers()
   local peerList = {}
@@ -229,6 +232,8 @@ function Comm.SendInfo(target)
     tostring(profession2Icon or ""),
     tostring(History.GetLatestChatAt()),
     table.concat(peerList, ","),
+    Utils.EscapeField(spec),
+    tostring(specIcon or ""),
   }, ";")
 
   sendAddonWhisper(payload, target)
@@ -385,6 +390,8 @@ function Comm.HandleInfo(parts, sender)
     profession2 = profession2,
     profession1Icon = profession1Icon,
     profession2Icon = profession2Icon,
+    spec = Utils.UnescapeField(parts[14]),
+    specIcon = parts[15],
   }, Utils.Now())
 
   Store.MarkHistoryAdvertised(name, advertisedAt)
@@ -568,6 +575,8 @@ function Comm.HandleRosterProfile(parts, sender)
     profession2 = Utils.UnescapeField(parts[10]),
     profession1Icon = parts[11],
     profession2Icon = parts[12],
+    spec = Utils.UnescapeField(parts[15]),
+    specIcon = parts[16],
   }, tonumber(parts[14]) or (timestamp > 0 and timestamp or Utils.Now()))
 
   if member then

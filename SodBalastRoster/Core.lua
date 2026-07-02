@@ -45,6 +45,7 @@ end
 
 local function refreshLocalProfile(shouldBroadcast)
   local profession1, profession2, profession1Icon, profession2Icon = ns.Utils.SafeProfessions()
+  local spec, specIcon = ns.Utils.SafeSpec()
   local _, changes = ns.Store.SetProfile(ns.Utils.PlayerName(), {
     level = ns.Utils.SafeLevel(),
     classFile = ns.Utils.SafeClassFile(),
@@ -54,6 +55,8 @@ local function refreshLocalProfile(shouldBroadcast)
     profession2 = profession2,
     profession1Icon = profession1Icon,
     profession2Icon = profession2Icon,
+    spec = spec,
+    specIcon = specIcon,
   }, ns.Utils.Now())
 
   if shouldBroadcast and changes then
@@ -215,6 +218,12 @@ Core:SetScript("OnEvent", function(_, event, ...)
     return
   end
 
+  if event == "CHARACTER_POINTS_CHANGED" then
+    refreshLocalProfile(true)
+    refreshUI()
+    return
+  end
+
   if event == "PLAYER_CAMPING" or event == "PLAYER_QUITING" then
     -- fires at the START of the logout/quit countdown, while still fully connected
     ns.Comm.BroadcastBye()
@@ -338,6 +347,7 @@ Core:RegisterEvent("PLAYER_CAMPING")
 Core:RegisterEvent("PLAYER_QUITING")
 Core:RegisterEvent("PLAYER_LOGOUT")
 Core:RegisterEvent("SKILL_LINES_CHANGED")
+Core:RegisterEvent("CHARACTER_POINTS_CHANGED")
 Core:RegisterEvent("CHANNEL_UI_UPDATE")
 Core:RegisterEvent("CHAT_MSG_CHANNEL_NOTICE")
 Core:RegisterEvent("CHAT_MSG_CHANNEL")

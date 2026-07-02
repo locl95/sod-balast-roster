@@ -90,6 +90,8 @@ member = {
   classFile = "WARRIOR",
   zone = "The Barrens",
   guildName = "Fresh-07",
+  spec = "Arms",
+  specIcon = 136241,
 }
 ```
 
@@ -120,10 +122,10 @@ Mensajes activos:
 
 - `REQ;4`
 - `HELLO;4;player`
-- `INFO;4;name;level;class;zone;guild;prof1;prof2;prof1Icon;prof2Icon;latestChatAt`
+- `INFO;4;name;level;class;zone;guild;prof1;prof2;prof1Icon;prof2Icon;latestChatAt;peerList;spec;specIcon`
 - `RSUM;4;player;latestRosterUpdatedAt;countRecent`
 - `RREQ;4;sinceTimestamp`
-- `RPRO;4;...`
+- `RPRO;4;...;spec;specIcon`
 - `CSUM;4;player;latestChatAt;countRecent;oldestAt;firstId;lastId`
 - `CREQ;4;sinceTimestamp`
 - `CMSG;4;...`
@@ -146,6 +148,8 @@ El receptor responde con `INFO`.
 ### INFO
 
 Se responde por `WHISPER` con el perfil vivo del jugador local y el ultimo timestamp de chat conocido.
+
+`spec`/`specIcon` viajan como campos opcionales al final del payload (igual en `RPRO`): se autoreportan como las profesiones (arbol de talentos con mas puntos gastados, sin `GetSpecialization`, inexistente en Classic/SoD) y no requieren bump de `protocolVersion`: un emisor nuevo con un receptor viejo simplemente ignora los campos sobrantes, y un receptor nuevo con un emisor viejo los trata como vacios.
 
 ### RSUM / RREQ / RPRO
 

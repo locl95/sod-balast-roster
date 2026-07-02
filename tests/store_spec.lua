@@ -10,6 +10,20 @@ test("Store migrates legacy history sync timestamp into chat sync", function(t)
   t.assertEqual(ctx.ns.Store.GetChatSyncAt("Remote"), 42)
 end)
 
+test("Store.SetProfile applies spec and specIcon", function(t)
+  local ctx = t.newContext()
+  ctx.ns.Store.UpsertMember("Remote", {})
+
+  local member, changes = ctx.ns.Store.SetProfile("Remote", {
+    spec = "Fire",
+    specIcon = "135813",
+  }, 100)
+
+  t.assertEqual(member.spec, "Fire")
+  t.assertEqual(member.specIcon, "135813")
+  t.assertEqual(changes.spec.new, "Fire")
+end)
+
 test("Store.MarkChatSynced keeps chat and legacy history timestamps aligned", function(t)
   local ctx = t.newContext()
   ctx.ns.Store.MarkChatSynced("Remote", 123)

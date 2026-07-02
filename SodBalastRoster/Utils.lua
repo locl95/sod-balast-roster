@@ -98,6 +98,26 @@ function Utils.SafeLevel()
   return UnitLevel("player") or 0
 end
 
+function Utils.SafeSpec()
+  if not (GetNumTalentTabs and GetTalentTabInfo) then
+    return "", ""
+  end
+
+  local bestName, bestIcon, bestPoints = "", "", 0
+  for tab = 1, GetNumTalentTabs() do
+    local name, icon, pointsSpent = GetTalentTabInfo(tab)
+    if name and (pointsSpent or 0) > bestPoints then
+      bestName, bestIcon, bestPoints = name, icon, pointsSpent
+    end
+  end
+
+  if bestPoints <= 0 then
+    return "", ""
+  end
+
+  return bestName, bestIcon
+end
+
 function Utils.ResolveProfessionIcon(name, icon)
   if icon and icon ~= 0 and icon ~= "" then
     return tonumber(icon) or icon

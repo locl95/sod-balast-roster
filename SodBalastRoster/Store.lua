@@ -124,6 +124,8 @@ function Store.GetMember(name)
     profession2 = "",
     profession1Icon = "",
     profession2Icon = "",
+    spec = "",
+    specIcon = "",
     lastRequestedAt = 0,
     lastWhoRequestedAt = 0,
   }
@@ -341,6 +343,8 @@ function Store.SetProfile(name, profile, timestamp)
   apply("profession2", profile.profession2)
   apply("profession1Icon", profile.profession1Icon)
   apply("profession2Icon", profile.profession2Icon)
+  apply("spec", profile.spec)
+  apply("specIcon", profile.specIcon)
 
   member.hasAddon = true
   member.pendingAddonProbe = false
