@@ -523,6 +523,52 @@ local function createRow(parent, index)
   row.profs = createLabel(row, 130, "LEFT")
   row.profs:SetPoint("LEFT", row.guild, "RIGHT", 4, 0)
 
+  row.profsButton = CreateFrame("Button", nil, row)
+  row.profsButton.isRosterRowInteractive = true
+  row.profsButton:SetSize(130, ROW_HEIGHT)
+  row.profsButton:SetPoint("LEFT", row.guild, "RIGHT", 4, 0)
+  row.profsButton:EnableMouse(true)
+  row.profsButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+  row.profsButton:SetScript("OnClick", handleRightClick)
+  row.profsButton:SetScript("OnEnter", function(self)
+    row.highlight:Show()
+
+    local member = row.member
+    if not member then
+      return
+    end
+
+    local hasProf1 = member.profession1 and member.profession1 ~= ""
+    local hasProf2 = member.profession2 and member.profession2 ~= ""
+    if not hasProf1 and not hasProf2 then
+      return
+    end
+
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText("Professions")
+
+    local function addProfessionLine(name, skill, maxSkill)
+      if (maxSkill or 0) > 0 then
+        GameTooltip:AddLine(string.format("%s: %d/%d", name, skill or 0, maxSkill), 1, 1, 1)
+      else
+        GameTooltip:AddLine(name, 1, 1, 1)
+      end
+    end
+
+    if hasProf1 then
+      addProfessionLine(member.profession1, member.profession1Skill, member.profession1MaxSkill)
+    end
+    if hasProf2 then
+      addProfessionLine(member.profession2, member.profession2Skill, member.profession2MaxSkill)
+    end
+
+    GameTooltip:Show()
+  end)
+  row.profsButton:SetScript("OnLeave", function()
+    row.highlight:Hide()
+    GameTooltip:Hide()
+  end)
+
   row.lastSeen = createLabel(row, 70, "LEFT")
   row.lastSeen:SetPoint("LEFT", row.profs, "RIGHT", 4, 0)
 

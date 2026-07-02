@@ -124,6 +124,10 @@ function Store.GetMember(name)
     profession2 = "",
     profession1Icon = "",
     profession2Icon = "",
+    profession1Skill = 0,
+    profession1MaxSkill = 0,
+    profession2Skill = 0,
+    profession2MaxSkill = 0,
     spec = "",
     specIcon = "",
     lastRequestedAt = 0,
@@ -328,6 +332,17 @@ function Store.SetProfile(name, profile, timestamp)
     end
   end
 
+  local function applyNumber(field, value)
+    value = tonumber(value) or 0
+    if member[field] ~= value then
+      changes[field] = {
+        old = member[field],
+        new = value,
+      }
+      member[field] = value
+    end
+  end
+
   if profile.level and tonumber(profile.level) then
     local level = tonumber(profile.level)
     if member.level ~= level then
@@ -343,6 +358,10 @@ function Store.SetProfile(name, profile, timestamp)
   apply("profession2", profile.profession2)
   apply("profession1Icon", profile.profession1Icon)
   apply("profession2Icon", profile.profession2Icon)
+  applyNumber("profession1Skill", profile.profession1Skill)
+  applyNumber("profession1MaxSkill", profile.profession1MaxSkill)
+  applyNumber("profession2Skill", profile.profession2Skill)
+  applyNumber("profession2MaxSkill", profile.profession2MaxSkill)
   apply("spec", profile.spec)
   apply("specIcon", profile.specIcon)
 

@@ -44,7 +44,7 @@ end
 
 
 local function refreshLocalProfile(shouldBroadcast)
-  local profession1, profession2, profession1Icon, profession2Icon = ns.Utils.SafeProfessions()
+  local profession1, profession2, profession1Icon, profession2Icon, profession1Skill, profession1MaxSkill, profession2Skill, profession2MaxSkill = ns.Utils.SafeProfessions()
   local spec, specIcon = ns.Utils.SafeSpec()
   local _, changes = ns.Store.SetProfile(ns.Utils.PlayerName(), {
     level = ns.Utils.SafeLevel(),
@@ -55,6 +55,10 @@ local function refreshLocalProfile(shouldBroadcast)
     profession2 = profession2,
     profession1Icon = profession1Icon,
     profession2Icon = profession2Icon,
+    profession1Skill = profession1Skill,
+    profession1MaxSkill = profession1MaxSkill,
+    profession2Skill = profession2Skill,
+    profession2MaxSkill = profession2MaxSkill,
     spec = spec,
     specIcon = specIcon,
   }, ns.Utils.Now())

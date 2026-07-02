@@ -103,6 +103,10 @@ local function encodeRosterProfile(member)
     tostring(member.lastUpdatedAt or 0),
     Utils.EscapeField(member.spec or ""),
     tostring(member.specIcon or ""),
+    tostring(member.profession1Skill or 0),
+    tostring(member.profession1MaxSkill or 0),
+    tostring(member.profession2Skill or 0),
+    tostring(member.profession2MaxSkill or 0),
   }, ";")
 end
 
@@ -207,7 +211,7 @@ function Comm.SendInfo(target)
   end
 
   local playerName = Utils.PlayerName() or ""
-  local profession1, profession2, profession1Icon, profession2Icon = Utils.SafeProfessions()
+  local profession1, profession2, profession1Icon, profession2Icon, profession1Skill, profession1MaxSkill, profession2Skill, profession2MaxSkill = Utils.SafeProfessions()
   local spec, specIcon = Utils.SafeSpec()
 
   local onlinePeers = Store.GetOnlineAddonMembers()
@@ -234,6 +238,10 @@ function Comm.SendInfo(target)
     table.concat(peerList, ","),
     Utils.EscapeField(spec),
     tostring(specIcon or ""),
+    tostring(profession1Skill or 0),
+    tostring(profession1MaxSkill or 0),
+    tostring(profession2Skill or 0),
+    tostring(profession2MaxSkill or 0),
   }, ";")
 
   sendAddonWhisper(payload, target)
@@ -390,6 +398,10 @@ function Comm.HandleInfo(parts, sender)
     profession2 = profession2,
     profession1Icon = profession1Icon,
     profession2Icon = profession2Icon,
+    profession1Skill = parts[16],
+    profession1MaxSkill = parts[17],
+    profession2Skill = parts[18],
+    profession2MaxSkill = parts[19],
     spec = Utils.UnescapeField(parts[14]),
     specIcon = parts[15],
   }, Utils.Now())
@@ -575,6 +587,10 @@ function Comm.HandleRosterProfile(parts, sender)
     profession2 = Utils.UnescapeField(parts[10]),
     profession1Icon = parts[11],
     profession2Icon = parts[12],
+    profession1Skill = parts[17],
+    profession1MaxSkill = parts[18],
+    profession2Skill = parts[19],
+    profession2MaxSkill = parts[20],
     spec = Utils.UnescapeField(parts[15]),
     specIcon = parts[16],
   }, tonumber(parts[14]) or (timestamp > 0 and timestamp or Utils.Now()))

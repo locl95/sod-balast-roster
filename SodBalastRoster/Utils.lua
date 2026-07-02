@@ -193,21 +193,29 @@ function Utils.SafeProfessions()
   local profession2 = ""
   local profession1Icon = ""
   local profession2Icon = ""
+  local profession1Skill = 0
+  local profession1MaxSkill = 0
+  local profession2Skill = 0
+  local profession2MaxSkill = 0
 
   if primary1 then
-    local name1, icon1 = GetProfessionInfo(primary1)
+    local name1, icon1, skill1, max1 = GetProfessionInfo(primary1)
     profession1 = name1 or ""
     profession1Icon = Utils.ResolveProfessionIcon(profession1, icon1)
+    profession1Skill = skill1 or 0
+    profession1MaxSkill = max1 or 0
   end
 
   if primary2 then
-    local name2, icon2 = GetProfessionInfo(primary2)
+    local name2, icon2, skill2, max2 = GetProfessionInfo(primary2)
     profession2 = name2 or ""
     profession2Icon = Utils.ResolveProfessionIcon(profession2, icon2)
+    profession2Skill = skill2 or 0
+    profession2MaxSkill = max2 or 0
   end
 
   if profession1 ~= "" or profession2 ~= "" then
-    return profession1, profession2, profession1Icon, profession2Icon
+    return profession1, profession2, profession1Icon, profession2Icon, profession1Skill, profession1MaxSkill, profession2Skill, profession2MaxSkill
   end
 
   if GetNumSkillLines and GetSkillLineInfo then
@@ -219,6 +227,8 @@ function Utils.SafeProfessions()
         professions[#professions + 1] = {
           name = skillName,
           icon = Utils.ResolveProfessionIcon(skillName),
+          skill = skillRank or 0,
+          maxSkill = skillMaxRank or 0,
         }
         if #professions >= 2 then
           break
@@ -226,10 +236,17 @@ function Utils.SafeProfessions()
       end
     end
 
-    return professions[1] and professions[1].name or "", professions[2] and professions[2].name or "", professions[1] and professions[1].icon or "", professions[2] and professions[2].icon or ""
+    return professions[1] and professions[1].name or "",
+      professions[2] and professions[2].name or "",
+      professions[1] and professions[1].icon or "",
+      professions[2] and professions[2].icon or "",
+      professions[1] and professions[1].skill or 0,
+      professions[1] and professions[1].maxSkill or 0,
+      professions[2] and professions[2].skill or 0,
+      professions[2] and professions[2].maxSkill or 0
   end
 
-  return profession1, profession2, profession1Icon, profession2Icon
+  return profession1, profession2, profession1Icon, profession2Icon, profession1Skill, profession1MaxSkill, profession2Skill, profession2MaxSkill
 end
 
 function Utils.DebugProfessions()
