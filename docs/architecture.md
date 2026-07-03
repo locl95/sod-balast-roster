@@ -75,7 +75,7 @@ Responsable de la ventana principal, filtros, tabs y render del roster e histori
 
 Responsable de notificar el primer avistamiento de cada jugador durante la sesion actual (toast en pantalla + sonido + linea en el chat local). El estado de "ya notificado" vive solo en memoria (se recrea en cada carga del addon), nunca en `SavedVariables`.
 
-Tiene una ventana de calentamiento (`WARMUP_SECONDS`) tras `PLAYER_LOGIN`/`/reload`: durante ese margen no se notifica nada, para no disparar una notificacion por cada peer que ya estaba online cuando te logueas (el store igualmente los marca como "vistos esta sesion" para que no se acumulen notificaciones pendientes despues del calentamiento).
+El descubrimiento del roster que ya estaba online al loguear no llega de golpe (whispers de bootstrap limitados a 1/s, listas de peers reenviadas, rescans), asi que el arranque usa un calentamiento adaptativo en vez de un temporizador fijo: cada avistamiento durante el arranque pospone el inicio de notificaciones (`QUIET_WINDOW_SECONDS`) hasta que hay un hueco de silencio real, con un techo duro (`MAX_WARMUP_SECONDS`) para no bloquear notificaciones legitimas si el canal esta muy activo. Los avistamientos que llegan juntos (dentro de `COALESCE_WINDOW`) se agrupan en un unico toast/sonido/linea en vez de encadenar uno por uno.
 
 ## Modelo de datos
 

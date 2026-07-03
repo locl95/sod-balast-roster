@@ -4,24 +4,49 @@ local Notify = {
   queue = {},
   active = false,
   readyAt = nil,
+  hardDeadline = nil,
+  pending = {},
+  coalesceScheduled = false,
 }
 ns.Notify = Notify
 
 local DISPLAY_DURATION = 2.4
 local FADE_IN = 0.25
 local FADE_OUT = 0.4
+local COALESCE_WINDOW = 1.2
 
--- Cubre el burst inicial de login: rescan (hasta +3s), bootstrap HELLO/INFO por
--- whisper y los CHAT_MSG_CHANNEL de gente que ya estaba en el canal. Sin esto,
--- cada peer que ya estaba online dispara una notificacion al loguearte.
-local WARMUP_SECONDS = 8
+-- El descubrimiento de peers que ya estaban online al loguear no llega de
+-- golpe: se resuelve poco a poco (whispers de bootstrap limitados a 1/s,
+-- listas de peers reenviadas, rescans). Un temporizador fijo corta a mitad
+-- de ese goteo y notifica sueltos con el sonido desincronizado del texto.
+-- En su lugar, cada descubrimiento durante el arranque pospone el inicio
+-- de notificaciones (debounce) hasta que haya un hueco de silencio real,
+-- con un techo duro para no bloquear notificaciones legitimas si el canal
+-- esta muy activo.
+local QUIET_WINDOW_SECONDS = 6
+local MAX_WARMUP_SECONDS = 20
 
 function Notify.Arm()
-  Notify.readyAt = GetTime() + WARMUP_SECONDS
+  local now = GetTime()
+  Notify.readyAt = now + QUIET_WINDOW_SECONDS
+  Notify.hardDeadline = now + MAX_WARMUP_SECONDS
 end
 
 local function isReady()
-  return Notify.readyAt ~= nil and GetTime() >= Notify.readyAt
+  if not Notify.readyAt then
+    return false
+  end
+
+  local now = GetTime()
+  return now >= Notify.readyAt or now >= Notify.hardDeadline
+end
+
+local function extendWarmup()
+  if not Notify.hardDeadline then
+    return
+  end
+
+  Notify.readyAt = math.min(GetTime() + QUIET_WINDOW_SECONDS, Notify.hardDeadline)
 end
 
 local function classColor(name)
@@ -35,13 +60,23 @@ local function classColor(name)
   return 0.55, 0.9, 1
 end
 
+local function formatNames(names)
+  local colored = {}
+  for _, name in ipairs(names) do
+    local r, g, b = classColor(name)
+    colored[#colored + 1] = string.format("|cff%02x%02x%02x%s|r", r * 255, g * 255, b * 255, name)
+  end
+
+  return table.concat(colored, ", ")
+end
+
 local function ensureFrame()
   if Notify.frame then
     return Notify.frame
   end
 
   local frame = CreateFrame("Frame", "SodBalastRosterDiscoveryToast", UIParent, BackdropTemplateMixin and "BackdropTemplate")
-  frame:SetSize(260, 32)
+  frame:SetSize(280, 32)
   frame:SetPoint("TOP", UIParent, "TOP", 0, -140)
   frame:SetAlpha(0)
   frame:Hide()
@@ -86,21 +121,20 @@ local function playChime()
   PlaySound(3081, "Master")
 end
 
-local function printChannelLine(name)
+local function printChannelLine(names)
   if not DEFAULT_CHAT_FRAME then
     return
   end
 
   local prefix = "|cff33ff99SODBALAST|r"
-  local r, g, b = classColor(name)
-  local coloredName = string.format("|cff%02x%02x%02x%s|r", r * 255, g * 255, b * 255, name)
-  DEFAULT_CHAT_FRAME:AddMessage(string.format("%s: [%s] has come online", prefix, coloredName))
+  local verb = #names > 1 and "have come online" or "has come online"
+  DEFAULT_CHAT_FRAME:AddMessage(string.format("%s: [%s] %s", prefix, formatNames(names), verb))
 end
 
 local function showNext()
   local frame = ensureFrame()
-  local name = table.remove(Notify.queue, 1)
-  if not name then
+  local entry = table.remove(Notify.queue, 1)
+  if not entry then
     Notify.active = false
     if UIFrameFadeOut then
       UIFrameFadeOut(frame, FADE_OUT, frame:GetAlpha(), 0)
@@ -111,8 +145,13 @@ local function showNext()
   end
 
   Notify.active = true
-  local r, g, b = classColor(name)
-  frame.text:SetText(string.format("|cff%02x%02x%02x%s|r acaba de conectarse", r * 255, g * 255, b * 255, name))
+  local label
+  if #entry == 1 then
+    label = string.format("%s acaba de conectarse", formatNames(entry))
+  else
+    label = string.format("%d jugadores acaban de conectarse: %s", #entry, formatNames(entry))
+  end
+  frame.text:SetText(label)
   frame:Show()
   if UIFrameFadeIn then
     UIFrameFadeIn(frame, FADE_IN, frame:GetAlpha(), 1)
@@ -135,18 +174,34 @@ local function showNext()
   end)
 end
 
+local function flushPending()
+  Notify.coalesceScheduled = false
+  local names = Notify.pending
+  Notify.pending = {}
+  if #names == 0 then
+    return
+  end
+
+  printChannelLine(names)
+  table.insert(Notify.queue, names)
+  if not Notify.active then
+    showNext()
+  end
+end
+
 function Notify.PlayerDiscovered(name)
   if not name or name == "" then
     return
   end
 
   if not isReady() then
+    extendWarmup()
     return
   end
 
-  printChannelLine(name)
-  table.insert(Notify.queue, name)
-  if not Notify.active then
-    showNext()
+  table.insert(Notify.pending, name)
+  if not Notify.coalesceScheduled then
+    Notify.coalesceScheduled = true
+    C_Timer.After(COALESCE_WINDOW, flushPending)
   end
 end
