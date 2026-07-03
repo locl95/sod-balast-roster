@@ -71,7 +71,8 @@ function ChatAlert.Create()
   frame.messageGlow:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -3, 3)
 
   frame.messageIcon = frame:CreateTexture(nil, "ARTWORK")
-  frame.messageIcon:SetTexture("Interface\\Minimap\\MiniMap-MailIcon")
+  frame.messageIcon:SetTexture("Interface\\Icons\\INV_Letter_15")
+  frame.messageIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
   frame.messageIcon:SetSize(16, 16)
   frame.messageIcon:SetPoint("LEFT", frame, "LEFT", 10, 0)
 
