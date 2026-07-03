@@ -22,9 +22,9 @@ local function addNote(parent, text, anchorTo, yOffset)
   return note
 end
 
-local function createCheckbox(parent, name, label, anchorTo, yOffset, getValue, setValue)
+local function createCheckbox(parent, name, label, anchorTo, xOffset, yOffset, getValue, setValue)
   local check = CreateFrame("CheckButton", name, parent, "InterfaceOptionsCheckButtonTemplate")
-  check:SetPoint("TOPLEFT", anchorTo, "BOTTOMLEFT", -2, yOffset)
+  check:SetPoint("TOPLEFT", anchorTo, "BOTTOMLEFT", xOffset, yOffset)
   _G[check:GetName() .. "Text"]:SetText(label)
   check:SetScript("OnClick", function(self)
     setValue(self:GetChecked() and true or false)
@@ -35,9 +35,9 @@ local function createCheckbox(parent, name, label, anchorTo, yOffset, getValue, 
   return check
 end
 
-local function createSlider(parent, name, label, anchorTo, yOffset, minValue, maxValue, step, getValue, setValue, formatValue)
+local function createSlider(parent, name, label, anchorTo, xOffset, yOffset, minValue, maxValue, step, getValue, setValue, formatValue)
   local slider = CreateFrame("Slider", name, parent, "OptionsSliderTemplate")
-  slider:SetPoint("TOPLEFT", anchorTo, "BOTTOMLEFT", 10, yOffset)
+  slider:SetPoint("TOPLEFT", anchorTo, "BOTTOMLEFT", xOffset, yOffset)
   slider:SetWidth(260)
   slider:SetMinMaxValues(minValue, maxValue)
   slider:SetValueStep(step)
@@ -88,23 +88,23 @@ function Options.Create()
   panel.title:SetPoint("TOPLEFT", 16, -16)
   panel.title:SetText(string.format("SodBalastRoster v%s", ns.version or "dev"))
 
-  panel.socialHeader = addHeader(panel, "Notificaciones sociales", panel.title, -24)
+  panel.socialHeader = addHeader(panel, "Social Notifications", panel.title, -24)
 
   panel.textAlertCheck = createCheckbox(panel, "SodBalastRosterOptionsTextAlert",
-    "Aviso de texto en el chat al ver jugadores conectados",
-    panel.socialHeader, -12,
+    "Show a chat message when players come online",
+    panel.socialHeader, -2, -12,
     Store.IsNotifyTextEnabled, Store.SetNotifyTextEnabled)
 
   panel.soundAlertCheck = createCheckbox(panel, "SodBalastRosterOptionsSoundAlert",
-    "Sonido al ver jugadores conectados",
-    panel.textAlertCheck, -8,
+    "Play a sound when players come online",
+    panel.textAlertCheck, 0, -8,
     Store.IsNotifySoundEnabled, Store.SetNotifySoundEnabled)
 
   panel.debugHeader = addHeader(panel, "Debug", panel.soundAlertCheck, -28)
 
   panel.debugCheck = createCheckbox(panel, "SodBalastRosterOptionsDebug",
-    "Activar herramientas de debug",
-    panel.debugHeader, -12,
+    "Enable debug tools",
+    panel.debugHeader, -2, -12,
     Store.IsCommDebugEnabled, function(value)
       Store.SetCommDebugEnabled(value)
       if ns.UI and ns.UI.frame and ns.UI.frame:IsShown() then
@@ -113,45 +113,45 @@ function Options.Create()
     end)
 
   panel.debugNote = addNote(panel,
-    "Registra el trafico de comunicacion entre addons y anade la pestana Debug a la ventana. Al desactivarlo, la pestana desaparece.",
-    panel.debugCheck, -6)
+    "Logs addon-to-addon communication traffic and adds the Debug tab to the window. Turning it off hides that tab.",
+    panel.debugCheck, 0, -6)
 
-  panel.advancedHeader = addHeader(panel, "Avanzado: frecuencia de red", panel.debugNote, -20)
+  panel.advancedHeader = addHeader(panel, "Advanced: Network Frequency", panel.debugNote, -20)
 
   panel.advancedNote = addNote(panel,
-    "Valores mas altos reducen el trafico y la carga en el canal, a costa de tardar mas en detectar cambios.",
-    panel.advancedHeader, -6)
+    "Higher values reduce channel traffic and load, at the cost of taking longer to detect changes.",
+    panel.advancedHeader, 0, -6)
 
   panel.scanSlider = createSlider(panel, "SodBalastRosterOptionsScanInterval",
-    "Escaneo del canal", panel.advancedNote, -30,
+    "Channel scan", panel.advancedNote, 10, -30,
     15, 120, 5,
     function() return Store.GetAdvancedState().scanInterval end,
     function(value) Store.SetAdvancedValue("scanInterval", value) end,
     formatSeconds)
 
   panel.rosterSummarySlider = createSlider(panel, "SodBalastRosterOptionsRosterSummary",
-    "Resumen de roster", panel.scanSlider, -40,
+    "Roster summary", panel.scanSlider, 0, -40,
     60, 900, 30,
     function() return Store.GetAdvancedState().rosterSummaryInterval end,
     function(value) Store.SetAdvancedValue("rosterSummaryInterval", value) end,
     formatSeconds)
 
   panel.chatSummarySlider = createSlider(panel, "SodBalastRosterOptionsChatSummary",
-    "Resumen de chat", panel.rosterSummarySlider, -40,
+    "Chat summary", panel.rosterSummarySlider, 0, -40,
     60, 900, 30,
     function() return Store.GetAdvancedState().chatSummaryInterval end,
     function(value) Store.SetAdvancedValue("chatSummaryInterval", value) end,
     formatSeconds)
 
   panel.whoIntervalSlider = createSlider(panel, "SodBalastRosterOptionsWhoInterval",
-    "Consultas /who", panel.chatSummarySlider, -40,
+    "/who queries", panel.chatSummarySlider, 0, -40,
     3, 30, 1,
     function() return Store.GetAdvancedState().whoRequestInterval end,
     function(value) Store.SetAdvancedValue("whoRequestInterval", value) end,
     formatSeconds)
 
   panel.sendIntervalSlider = createSlider(panel, "SodBalastRosterOptionsSendInterval",
-    "Ritmo de envio de mensajes de addon", panel.whoIntervalSlider, -40,
+    "Addon message send rate", panel.whoIntervalSlider, 0, -40,
     0.5, 5, 0.5,
     function() return Store.GetAdvancedState().requestInterval end,
     function(value) Store.SetAdvancedValue("requestInterval", value) end,
@@ -190,7 +190,7 @@ function Options.Open()
     return
   end
 
-  -- Blizzard: la primera llamada en la sesion no siempre resalta el panel; hay que llamarla dos veces.
+  -- Blizzard: the first call in a session doesn't always highlight the panel; it must be called twice.
   InterfaceOptionsFrame_OpenToCategory(Options.panel)
   InterfaceOptionsFrame_OpenToCategory(Options.panel)
 end
