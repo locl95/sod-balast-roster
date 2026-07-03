@@ -28,12 +28,11 @@ local function updateVisualState(frame)
 
   if ChatAlert.hasPendingChat then
     frame.messageGlow:Show()
-    frame.messageIcon:SetAlpha(1)
     frame:SetBackdropBorderColor(0.9, 0.82, 0.45, 1)
     frame.pulseTicker:Show()
   else
     frame.messageGlow:Hide()
-    frame.messageIcon:SetAlpha(0.45)
+    frame.messageIcon:SetAlpha(0.35)
     frame:SetBackdropBorderColor(0.32, 0.32, 0.32, 1)
     frame.pulseTicker:Hide()
     frame.pulseTime = 0
@@ -72,8 +71,7 @@ function ChatAlert.Create()
   frame.messageGlow:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -3, 3)
 
   frame.messageIcon = frame:CreateTexture(nil, "ARTWORK")
-  frame.messageIcon:SetTexture("Interface\\ChatFrame\\UI-ChatIcon-Chat-Up")
-  frame.messageIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+  frame.messageIcon:SetTexture("Interface\\Minimap\\MiniMap-MailIcon")
   frame.messageIcon:SetSize(16, 16)
   frame.messageIcon:SetPoint("LEFT", frame, "LEFT", 10, 0)
 
@@ -87,6 +85,7 @@ function ChatAlert.Create()
   frame.pulseTicker:SetScript("OnUpdate", function(_, elapsed)
     frame.pulseTime = (frame.pulseTime or 0) + elapsed * 3
     frame.messageGlow:SetAlpha(0.1 + math.max(0, math.sin(frame.pulseTime)) * 0.18)
+    frame.messageIcon:SetAlpha(0.35 + (math.sin(frame.pulseTime) + 1) / 2 * 0.65)
   end)
 
   frame.dragHint = false
