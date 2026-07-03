@@ -142,6 +142,11 @@ end
 local function handleSlashCommand(message)
   message = ns.Utils.Trim(message or "")
 
+  if message == "options" or message == "config" then
+    ns.Options.Open()
+    return
+  end
+
   local debugCommand = string.match(message, "^debug%s+(.+)$")
   if debugCommand then
     local subcommand, argument = string.match(debugCommand, "^(%S+)%s*(.-)$")
@@ -185,6 +190,7 @@ local function initialize()
   ns.MinimapButton.Create()
   ns.ChatAlert.Create()
   ns.ChatAlert.Refresh()
+  ns.Options.Create()
 
   SLASH_SODBALASTROSTER1 = "/sb"
   SLASH_SODBALASTROSTER2 = "/sbr"

@@ -36,6 +36,27 @@ local defaults = {
     commEnabled = false,
     commLogs = {},
   },
+  notifications = {
+    textEnabled = true,
+    soundEnabled = true,
+  },
+  advanced = {
+    scanInterval = ns.Constants.scanInterval,
+    rosterSummaryInterval = ns.Constants.rosterSummaryInterval,
+    chatSummaryInterval = ns.Constants.chatSummaryInterval,
+    whoRequestInterval = ns.Constants.whoRequestInterval,
+    requestInterval = ns.Constants.requestInterval,
+  },
+}
+
+-- Claves de "advanced" que se copian a ns.Constants al cargar y al cambiar
+-- un slider, para no tener que tocar cada sitio que ya lee ns.Constants.X.
+local ADVANCED_CONSTANT_KEYS = {
+  "scanInterval",
+  "rosterSummaryInterval",
+  "chatSummaryInterval",
+  "whoRequestInterval",
+  "requestInterval",
 }
 
 local function copyDefaults(target, source)
@@ -58,6 +79,16 @@ function Store.Init()
   copyDefaults(SodBalastRosterDB.scopes[scopeKey], defaults)
 
   ns.db = SodBalastRosterDB.scopes[scopeKey]
+  Store.ApplyAdvancedConstants()
+end
+
+function Store.ApplyAdvancedConstants()
+  local advanced = Store.GetAdvancedState()
+  for _, key in ipairs(ADVANCED_CONSTANT_KEYS) do
+    if advanced[key] then
+      ns.Constants[key] = advanced[key]
+    end
+  end
 end
 
 function Store.GetDB()
@@ -611,6 +642,35 @@ end
 
 function Store.GetDebugState()
   return Store.GetDB().debug
+end
+
+function Store.GetNotificationState()
+  return Store.GetDB().notifications
+end
+
+function Store.IsNotifyTextEnabled()
+  return Store.GetNotificationState().textEnabled ~= false
+end
+
+function Store.SetNotifyTextEnabled(enabled)
+  Store.GetNotificationState().textEnabled = enabled and true or false
+end
+
+function Store.IsNotifySoundEnabled()
+  return Store.GetNotificationState().soundEnabled ~= false
+end
+
+function Store.SetNotifySoundEnabled(enabled)
+  Store.GetNotificationState().soundEnabled = enabled and true or false
+end
+
+function Store.GetAdvancedState()
+  return Store.GetDB().advanced
+end
+
+function Store.SetAdvancedValue(key, value)
+  Store.GetAdvancedState()[key] = value
+  Store.ApplyAdvancedConstants()
 end
 
 function Store.IsCommDebugEnabled()

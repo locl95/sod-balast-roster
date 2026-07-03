@@ -1,5 +1,6 @@
 local addonName, ns = ...
 
+local Store = ns.Store
 local Notify = {
   readyAt = nil,
   hardDeadline = nil,
@@ -93,8 +94,13 @@ local function flushPending()
     return
   end
 
-  printChannelLine(names)
-  playChime()
+  if Store.IsNotifyTextEnabled() then
+    printChannelLine(names)
+  end
+
+  if Store.IsNotifySoundEnabled() then
+    playChime()
+  end
 end
 
 function Notify.PlayerDiscovered(name)

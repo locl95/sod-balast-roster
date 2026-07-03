@@ -1275,6 +1275,12 @@ function UI.Refresh()
   local frame = UI.Create()
   local uiState = Store.GetUIState()
   local selectedTab = uiState.selectedTab or TAB_ROSTER
+  local debugFeatureEnabled = Store.IsCommDebugEnabled()
+
+  if selectedTab == TAB_DEBUG and not debugFeatureEnabled then
+    selectedTab = TAB_ROSTER
+    Store.SetUIFlag("selectedTab", TAB_ROSTER)
+  end
 
   frame.onlyOnline:SetChecked(uiState.onlyOnline)
   frame.onlyAddon:SetChecked(uiState.onlyAddon)
@@ -1291,6 +1297,7 @@ function UI.Refresh()
   updateTabButtonState(frame.rosterTab, rosterSelected)
   updateTabButtonState(frame.historyTab, historySelected)
   updateTabButtonState(frame.debugTab, debugSelected)
+  frame.debugTab:SetShown(debugFeatureEnabled)
   frame.onlyOnline:SetShown(rosterSelected)
   frame.onlyOnline.label:SetShown(rosterSelected)
   frame.onlyAddon:SetShown(rosterSelected)
