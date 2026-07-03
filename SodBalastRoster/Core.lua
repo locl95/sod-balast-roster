@@ -174,6 +174,9 @@ end
 
 local function initialize()
   bootstrapHelloSent = false
+  if ns.Notify then
+    ns.Notify.Arm()
+  end
   ns.Store.Init()
   ns.Store.ResetTransientState()
   ns.History.Init()
@@ -271,10 +274,14 @@ Core:SetScript("OnEvent", function(_, event, ...)
     local message, sender, _, channelName, _, _, _, _, channelBaseName, _, lineId = ...
     if ns.Utils.IsTargetChannel(channelName, channelBaseName) then
       local now = ns.Utils.Now()
-      local member, justJoined = ns.Store.MarkObservedInChannel(sender, now)
+      local member, justJoined, firstThisSession = ns.Store.MarkObservedInChannel(sender, now)
       local normalizedSender = ns.Utils.NormalizeName(sender)
-      if justJoined and ns.Utils.NormalizeName(sender) ~= ns.Utils.PlayerName() then
+      local isSelf = normalizedSender == ns.Utils.PlayerName()
+      if justJoined and not isSelf then
         ns.History.Add("joined_channel", sender)
+      end
+      if firstThisSession and not isSelf and ns.Notify then
+        ns.Notify.PlayerDiscovered(sender)
       end
       if member and member.name ~= ns.Utils.PlayerName() and member.hasAddon then
         ns.Comm.QueueProfileRequest(member.name)

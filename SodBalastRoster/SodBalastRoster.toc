@@ -13,5 +13,6 @@ Comm.lua
 Who.lua
 MinimapButton.lua
 ChatAlert.lua
+Notify.lua
 UI.lua
 Core.lua

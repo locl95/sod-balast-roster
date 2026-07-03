@@ -71,6 +71,12 @@ Responsable de:
 
 Responsable de la ventana principal, filtros, tabs y render del roster e historico.
 
+### Notify
+
+Responsable de notificar el primer avistamiento de cada jugador durante la sesion actual (toast en pantalla + sonido + linea en el chat local). El estado de "ya notificado" vive solo en memoria (se recrea en cada carga del addon), nunca en `SavedVariables`.
+
+Tiene una ventana de calentamiento (`WARMUP_SECONDS`) tras `PLAYER_LOGIN`/`/reload`: durante ese margen no se notifica nada, para no disparar una notificacion por cada peer que ya estaba online cuando te logueas (el store igualmente los marca como "vistos esta sesion" para que no se acumulen notificaciones pendientes despues del calentamiento).
+
 ## Modelo de datos
 
 ```lua

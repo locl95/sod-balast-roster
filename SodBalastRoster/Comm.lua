@@ -614,7 +614,10 @@ function Comm.HandleAddonMessage(prefix, text, _, sender)
 
   logCommTraffic("IN", senderName, text)
 
-  Store.MarkAddonSeen(senderName, Utils.Now())
+  local _, firstThisSession = Store.MarkAddonSeen(senderName, Utils.Now())
+  if firstThisSession and ns.Notify then
+    ns.Notify.PlayerDiscovered(senderName)
+  end
 
   local parts = Utils.SplitMessage(text, ";")
   local messageType = parts[1]

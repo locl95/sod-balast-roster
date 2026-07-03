@@ -157,6 +157,19 @@ function Store.UpsertMember(name, patch)
   return member
 end
 
+-- En memoria, no persistido: se recrea en cada carga del addon, por lo que
+-- modela "visto por primera vez en esta sesion" sin tocar SavedVariables.
+local sessionSighted = {}
+
+local function markSessionSighting(name)
+  if sessionSighted[name] then
+    return false
+  end
+
+  sessionSighted[name] = true
+  return true
+end
+
 local function markObserved(member, timestamp, source)
   local wasOnline = member.isOnlineInChannel
 
@@ -179,7 +192,7 @@ local function markObserved(member, timestamp, source)
     member.lastObservedByWhoAt = timestamp
   end
 
-  return wasOnline
+  return wasOnline, markSessionSighting(member.name)
 end
 
 function Store.MarkAddonSeen(name, timestamp)
@@ -199,38 +212,38 @@ function Store.MarkAddonSeen(name, timestamp)
   member.pendingAddonProbe = false
   member.lastAddonSeenAt = timestamp
   member.missedAddonProbes = 0
-  return member
+  return member, markSessionSighting(member.name)
 end
 
 function Store.MarkObservedInChannel(name, timestamp)
   local member = Store.GetMember(name)
   if not member then
-    return nil, false
+    return nil, false, false
   end
 
-  local wasOnline = markObserved(member, timestamp, "chat")
+  local wasOnline, firstThisSession = markObserved(member, timestamp, "chat")
 
-  return member, not wasOnline
+  return member, not wasOnline, firstThisSession
 end
 
 function Store.MarkObservedByNotice(name, timestamp)
   local member = Store.GetMember(name)
   if not member then
-    return nil, false
+    return nil, false, false
   end
 
-  local wasOnline = markObserved(member, timestamp, "notice")
-  return member, not wasOnline
+  local wasOnline, firstThisSession = markObserved(member, timestamp, "notice")
+  return member, not wasOnline, firstThisSession
 end
 
 function Store.MarkObservedByWho(name, timestamp)
   local member = Store.GetMember(name)
   if not member then
-    return nil, false
+    return nil, false, false
   end
 
-  local wasOnline = markObserved(member, timestamp, "who")
-  return member, not wasOnline
+  local wasOnline, firstThisSession = markObserved(member, timestamp, "who")
+  return member, not wasOnline, firstThisSession
 end
 
 function Store.MarkSelfInChannel(timestamp)
