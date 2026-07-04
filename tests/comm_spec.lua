@@ -297,6 +297,64 @@ test("Comm.HandleInfo peer list queues HELLO instead of marking peers online dir
   t.assertTrue(helloQueued)
 end)
 
+test("Comm.SendInfo appends the local addon version as the trailing INFO field", function(t)
+  local ctx = t.newContext()
+  ctx.ns.version = "1.2.3"
+
+  ctx.ns.Comm.SendInfo("Remote")
+
+  local sent = ctx.env.sentAddonMessages[#ctx.env.sentAddonMessages]
+  t.assertTrue(sent ~= nil, "expected an addon message to have been sent")
+  local parts = ctx.ns.Utils.SplitMessage(sent.payload, ";")
+  t.assertEqual(parts[#parts], "1.2.3")
+end)
+
+test("Comm.HandleInfo notes a newer remote addon version from the trailing field", function(t)
+  local ctx = t.newContext()
+  ctx.ns.version = "1.0.0"
+
+  ctx.ns.Comm.HandleInfo({
+    "INFO", "4", "Remote",
+    "60", "WARRIOR", "Durotar", "Raiders",
+    "", "", "", "",
+    "0",
+    "",
+    "", "",
+    "0", "0", "0", "0",
+    "1.1.0",
+  }, "Remote")
+
+  t.assertEqual(ctx.ns.newestKnownVersion, "1.1.0")
+end)
+
+test("Comm.HandleInfo ignores a trailing version that is not newer than ours", function(t)
+  local ctx = t.newContext()
+  ctx.ns.version = "1.5.0"
+
+  ctx.ns.Comm.HandleInfo({
+    "INFO", "4", "Remote",
+    "60", "WARRIOR", "Durotar", "Raiders",
+    "", "", "", "",
+    "0",
+    "",
+    "", "",
+    "0", "0", "0", "0",
+    "1.0.0",
+  }, "Remote")
+
+  t.assertNil(ctx.ns.newestKnownVersion)
+end)
+
+test("Comm.NoteRemoteVersion keeps the highest known version seen", function(t)
+  local ctx = t.newContext()
+  ctx.ns.version = "1.0.0"
+
+  ctx.ns.Comm.NoteRemoteVersion("1.2.0")
+  ctx.ns.Comm.NoteRemoteVersion("1.1.0")
+
+  t.assertEqual(ctx.ns.newestKnownVersion, "1.2.0")
+end)
+
 test("Comm.HandleInfo peer list does not resurrect offline peer as online", function(t)
   -- Regression test: an offline peer mentioned in a third-party peer list must
   -- not have isOnlineInChannel set back to true.

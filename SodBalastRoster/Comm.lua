@@ -242,9 +242,32 @@ function Comm.SendInfo(target)
     tostring(profession1MaxSkill or 0),
     tostring(profession2Skill or 0),
     tostring(profession2MaxSkill or 0),
+    tostring(ns.version or ""),
   }, ";")
 
   sendAddonWhisper(payload, target)
+end
+
+-- Un peer con una version mas nueva del addon la anuncia en su INFO (ultimo campo).
+-- Si es mas nueva que la nuestra y que la ultima que vimos, avisamos en la UI/Options.
+function Comm.NoteRemoteVersion(remoteVersion)
+  if not Utils.IsVersionNewer(remoteVersion, ns.version) then
+    return
+  end
+
+  if ns.newestKnownVersion and not Utils.IsVersionNewer(remoteVersion, ns.newestKnownVersion) then
+    return
+  end
+
+  ns.newestKnownVersion = remoteVersion
+
+  if ns.UI and ns.UI.SetVersionWarning then
+    ns.UI.SetVersionWarning(remoteVersion)
+  end
+
+  if ns.Options and ns.Options.SetVersionWarning then
+    ns.Options.SetVersionWarning(remoteVersion)
+  end
 end
 
 function Comm.BroadcastInfo()
@@ -365,6 +388,11 @@ function Comm.HandleInfo(parts, sender)
   local name = payloadName or senderName
   if not name then
     return
+  end
+
+  local remoteAddonVersion = parts[20]
+  if remoteAddonVersion and remoteAddonVersion ~= "" then
+    Comm.NoteRemoteVersion(remoteAddonVersion)
   end
 
   local existing = Store.GetMember(name)

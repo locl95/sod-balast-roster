@@ -794,6 +794,27 @@ function UI.UpdateHistoryIndicator()
   end
 end
 
+function UI.ApplyVersionWarning(frame)
+  if not frame or not frame.versionWarning then
+    return
+  end
+
+  if UI.newestKnownVersion then
+    frame.versionWarning:SetText(string.format(
+      "There's a new version available (v%s) - it's highly recommended to update the addon",
+      UI.newestKnownVersion
+    ))
+    frame.versionWarning:Show()
+  else
+    frame.versionWarning:Hide()
+  end
+end
+
+function UI.SetVersionWarning(version)
+  UI.newestKnownVersion = version
+  UI.ApplyVersionWarning(UI.frame)
+end
+
 function UI.Create()
   if UI.frame then
     return UI.frame
@@ -817,6 +838,12 @@ function UI.Create()
   frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
   frame.title:SetPoint("LEFT", frame.TitleBg, "LEFT", 8, 0)
   frame.title:SetText(string.format("SodBalastRoster v%s", ns.version or "dev"))
+
+  frame.versionWarning = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  frame.versionWarning:SetPoint("LEFT", frame.title, "RIGHT", 8, 0)
+  frame.versionWarning:SetTextColor(1, 0.15, 0.15)
+  frame.versionWarning:Hide()
+  UI.ApplyVersionWarning(frame)
 
   frame.rosterTab = createTabButton(frame, 0, -56, TAB_ROSTER, "Roster")
   frame.historyTab = createTabButton(frame, 0, -56 - TAB_ICON_SIZE, TAB_HISTORY, "Chat")

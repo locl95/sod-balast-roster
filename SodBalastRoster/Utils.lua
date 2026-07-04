@@ -187,6 +187,32 @@ function Utils.IsSupportedProtocolVersion(version)
   return version == "1" or version == "2" or version == "3" or version == "4" or version == "5"
 end
 
+function Utils.CompareVersions(a, b)
+  local partsA = tostring(a or "0"):gmatch("%d+")
+  local partsB = tostring(b or "0"):gmatch("%d+")
+
+  while true do
+    local segmentA, segmentB = partsA(), partsB()
+    if not segmentA and not segmentB then
+      return 0
+    end
+
+    segmentA = tonumber(segmentA) or 0
+    segmentB = tonumber(segmentB) or 0
+    if segmentA ~= segmentB then
+      return segmentA > segmentB and 1 or -1
+    end
+  end
+end
+
+function Utils.IsVersionNewer(candidate, current)
+  if not candidate or candidate == "" then
+    return false
+  end
+
+  return Utils.CompareVersions(candidate, current) > 0
+end
+
 function Utils.SafeProfessions()
   local primary1, primary2 = GetProfessions()
   local profession1 = ""

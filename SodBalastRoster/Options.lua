@@ -76,6 +76,27 @@ local function formatSendInterval(value)
   return string.format("%.1fs", value)
 end
 
+function Options.ApplyVersionWarning(panel)
+  if not panel or not panel.versionWarning then
+    return
+  end
+
+  if Options.newestKnownVersion then
+    panel.versionWarning:SetText(string.format(
+      "There's a new version available (v%s) - it's highly recommended to update the addon",
+      Options.newestKnownVersion
+    ))
+    panel.versionWarning:Show()
+  else
+    panel.versionWarning:Hide()
+  end
+end
+
+function Options.SetVersionWarning(version)
+  Options.newestKnownVersion = version
+  Options.ApplyVersionWarning(Options.panel)
+end
+
 function Options.Create()
   if Options.panel then
     return Options.panel
@@ -87,6 +108,12 @@ function Options.Create()
   panel.title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
   panel.title:SetPoint("TOPLEFT", 16, -16)
   panel.title:SetText(string.format("SodBalastRoster v%s", ns.version or "dev"))
+
+  panel.versionWarning = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+  panel.versionWarning:SetPoint("LEFT", panel.title, "RIGHT", 10, 0)
+  panel.versionWarning:SetTextColor(1, 0.15, 0.15)
+  panel.versionWarning:Hide()
+  Options.ApplyVersionWarning(panel)
 
   panel.socialHeader = addHeader(panel, "Social Notifications", panel.title, -24)
 
