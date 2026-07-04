@@ -2,7 +2,7 @@ local addonName, ns = ...
 
 local Core = CreateFrame("Frame")
 ns.Core = Core
-ns.version = "1.0.0"
+ns.version = "1.1.0"
 
 local refreshUI
 
