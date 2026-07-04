@@ -849,14 +849,15 @@ local SORT_COMPARATORS = {
     end
     return left.name < right.name
   end,
-  -- Comportamiento por defecto: Online primero, luego nivel desc, luego nombre.
+  -- Comportamiento por defecto: Online primero, luego offline del mas
+  -- reciente al mas antiguo (lastSeenAt desc), luego nombre.
   lastSeen = function(left, right)
     if left.isOnlineInChannel ~= right.isOnlineInChannel then
       return left.isOnlineInChannel
     end
 
-    if (left.level or 0) ~= (right.level or 0) then
-      return (left.level or 0) > (right.level or 0)
+    if (left.lastSeenAt or 0) ~= (right.lastSeenAt or 0) then
+      return (left.lastSeenAt or 0) > (right.lastSeenAt or 0)
     end
 
     return left.name < right.name
