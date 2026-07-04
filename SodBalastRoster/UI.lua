@@ -15,6 +15,18 @@ local VISIBLE_ROWS = 16
 local TAB_ICON_SIZE = 48
 local REFRESH_COOLDOWN = 15
 
+local ROSTER_HEADERS = {
+  { text = "A", key = "addon", x = 12, width = 28 },
+  { text = "Name", key = "name", x = 44, width = 150 },
+  { text = "Lvl", key = "level", x = 198, width = 40 },
+  { text = "Class", key = "class", x = 242, width = 26 },
+  { text = "Spec", key = "spec", x = 272, width = 26 },
+  { text = "Zone", key = "zone", x = 302, width = 170 },
+  { text = "Guild", key = "guild", x = 476, width = 130 },
+  { text = "Profs", key = "profs", x = 610, width = 130 },
+  { text = "Last Seen", key = "lastSeen", x = 744, width = 70 },
+}
+
 local lastRefreshAt = 0
 
 StaticPopupDialogs["SODBALASTROSTER_PURGE_LEGACY"] = {
@@ -956,25 +968,27 @@ function UI.Create()
   frame.emptyState:SetText("")
 
   frame.rosterHeaders = {}
-  local headers = {
-    { text = "A", x = 12, width = 28 },
-    { text = "Name", x = 44, width = 150 },
-    { text = "Lvl", x = 198, width = 40 },
-    { text = "Class", x = 242, width = 26 },
-    { text = "Spec", x = 272, width = 26 },
-    { text = "Zone", x = 302, width = 170 },
-    { text = "Guild", x = 476, width = 130 },
-    { text = "Profs", x = 610, width = 130 },
-    { text = "Last Seen", x = 744, width = 70 },
-  }
+  for _, header in ipairs(ROSTER_HEADERS) do
+    local button = CreateFrame("Button", nil, frame)
+    button:SetPoint("TOPLEFT", frame, "TOPLEFT", header.x, -100)
+    button:SetSize(header.width, ROW_HEIGHT)
+    button:EnableMouse(true)
+    button:RegisterForClicks("LeftButtonUp")
+    button.headerKey = header.key
+    button.headerText = header.text
 
-  for _, header in ipairs(headers) do
-    local label = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    label:SetPoint("TOPLEFT", frame, "TOPLEFT", header.x, -100)
+    local label = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    label:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0)
     label:SetWidth(header.width)
     label:SetJustifyH("LEFT")
-    label:SetText(header.text)
-    frame.rosterHeaders[#frame.rosterHeaders + 1] = label
+    button.label = label
+
+    button:SetScript("OnClick", function()
+      Store.SetSortColumn(header.key)
+      UI.RefreshRoster()
+    end)
+
+    frame.rosterHeaders[#frame.rosterHeaders + 1] = button
   end
 
   for index = 1, VISIBLE_ROWS do
@@ -1138,8 +1152,22 @@ function UI.Create()
   return frame
 end
 
+local function updateRosterHeaderSortIndicators(frame)
+  local sortColumn, sortDirection = Store.GetSortState()
+  local arrow = sortDirection == "desc" and " v" or " ^"
+
+  for _, header in ipairs(frame.rosterHeaders) do
+    if header.headerKey == sortColumn then
+      header.label:SetText(header.headerText .. arrow)
+    else
+      header.label:SetText(header.headerText)
+    end
+  end
+end
+
 function UI.RefreshRoster()
   local frame = UI.Create()
+  updateRosterHeaderSortIndicators(frame)
   local data = Store.GetVisibleRoster()
   local total = #data
   local offset = FauxScrollFrame_GetOffset(frame.scrollFrame)

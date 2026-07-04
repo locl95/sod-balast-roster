@@ -21,6 +21,8 @@ local defaults = {
     search = "",
     selectedTab = "roster",
     debugLogType = "comm",
+    sortColumn = "lastSeen",
+    sortDirection = "asc",
   },
   minimap = {
     angle = 220,
@@ -820,6 +822,94 @@ function Store.SaveChatAlertPosition(frame)
   state.y = y or 0
 end
 
+local DEFAULT_SORT_COLUMN = "lastSeen"
+
+-- Cada comparador define el orden "ascendente" de su columna; el orden
+-- descendente se obtiene invirtiendo los argumentos, así un segundo click
+-- siempre invierte exactamente lo que el primero produjo.
+local SORT_COMPARATORS = {
+  addon = function(left, right)
+    if left.hasAddon ~= right.hasAddon then
+      return left.hasAddon
+    end
+    return left.name < right.name
+  end,
+  name = function(left, right)
+    return left.name < right.name
+  end,
+  level = function(left, right)
+    if (left.level or 0) ~= (right.level or 0) then
+      return (left.level or 0) < (right.level or 0)
+    end
+    return left.name < right.name
+  end,
+  class = function(left, right)
+    if (left.classFile or "") ~= (right.classFile or "") then
+      return (left.classFile or "") < (right.classFile or "")
+    end
+    return left.name < right.name
+  end,
+  spec = function(left, right)
+    local leftSpec = tostring(left.specIcon or "")
+    local rightSpec = tostring(right.specIcon or "")
+    if leftSpec ~= rightSpec then
+      return leftSpec < rightSpec
+    end
+    return left.name < right.name
+  end,
+  zone = function(left, right)
+    if (left.zone or "") ~= (right.zone or "") then
+      return (left.zone or "") < (right.zone or "")
+    end
+    return left.name < right.name
+  end,
+  guild = function(left, right)
+    if (left.guildName or "") ~= (right.guildName or "") then
+      return (left.guildName or "") < (right.guildName or "")
+    end
+    return left.name < right.name
+  end,
+  profs = function(left, right)
+    local leftProf = left.profession1 ~= "" and left.profession1 or (left.profession2 or "")
+    local rightProf = right.profession1 ~= "" and right.profession1 or (right.profession2 or "")
+    if leftProf ~= rightProf then
+      return leftProf < rightProf
+    end
+    return left.name < right.name
+  end,
+  -- Comportamiento por defecto: Online primero, luego nivel desc, luego nombre.
+  lastSeen = function(left, right)
+    if left.isOnlineInChannel ~= right.isOnlineInChannel then
+      return left.isOnlineInChannel
+    end
+
+    if (left.level or 0) ~= (right.level or 0) then
+      return (left.level or 0) > (right.level or 0)
+    end
+
+    return left.name < right.name
+  end,
+}
+
+function Store.SetSortColumn(column)
+  if not SORT_COMPARATORS[column] then
+    return
+  end
+
+  local ui = Store.GetUIState()
+  if ui.sortColumn == column then
+    ui.sortDirection = (ui.sortDirection == "desc") and "asc" or "desc"
+  else
+    ui.sortColumn = column
+    ui.sortDirection = "asc"
+  end
+end
+
+function Store.GetSortState()
+  local ui = Store.GetUIState()
+  return ui.sortColumn or DEFAULT_SORT_COLUMN, ui.sortDirection or "asc"
+end
+
 function Store.GetVisibleRoster()
   local results = {}
   local ui = Store.GetUIState()
@@ -833,16 +923,14 @@ function Store.GetVisibleRoster()
     end
   end
 
+  local sortColumn, sortDirection = Store.GetSortState()
+  local comparator = SORT_COMPARATORS[sortColumn] or SORT_COMPARATORS[DEFAULT_SORT_COLUMN]
+
   table.sort(results, function(left, right)
-    if left.isOnlineInChannel ~= right.isOnlineInChannel then
-      return left.isOnlineInChannel
+    if sortDirection == "desc" then
+      return comparator(right, left)
     end
-
-    if (left.level or 0) ~= (right.level or 0) then
-      return (left.level or 0) > (right.level or 0)
-    end
-
-    return left.name < right.name
+    return comparator(left, right)
   end)
 
   return results
