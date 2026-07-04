@@ -16,14 +16,14 @@ local TAB_ICON_SIZE = 48
 local REFRESH_COOLDOWN = 15
 
 local ROSTER_HEADERS = {
-  { text = "A", key = "addon", x = 12, width = 28 },
+  { text = "A", x = 12, width = 28 },
   { text = "Name", key = "name", x = 44, width = 150 },
   { text = "Lvl", key = "level", x = 198, width = 40 },
   { text = "Class", key = "class", x = 242, width = 26 },
-  { text = "Spec", key = "spec", x = 272, width = 26 },
+  { text = "Spec", x = 272, width = 26 },
   { text = "Zone", key = "zone", x = 302, width = 170 },
-  { text = "Guild", key = "guild", x = 476, width = 130 },
-  { text = "Profs", key = "profs", x = 610, width = 130 },
+  { text = "Guild", x = 476, width = 130 },
+  { text = "Profs", x = 610, width = 130 },
   { text = "Last Seen", key = "lastSeen", x = 744, width = 70 },
 }
 
@@ -972,8 +972,6 @@ function UI.Create()
     local button = CreateFrame("Button", nil, frame)
     button:SetPoint("TOPLEFT", frame, "TOPLEFT", header.x, -100)
     button:SetSize(header.width, ROW_HEIGHT)
-    button:EnableMouse(true)
-    button:RegisterForClicks("LeftButtonUp")
     button.headerKey = header.key
     button.headerText = header.text
 
@@ -983,10 +981,14 @@ function UI.Create()
     label:SetJustifyH("LEFT")
     button.label = label
 
-    button:SetScript("OnClick", function()
-      Store.SetSortColumn(header.key)
-      UI.RefreshRoster()
-    end)
+    if header.key then
+      button:EnableMouse(true)
+      button:RegisterForClicks("LeftButtonUp")
+      button:SetScript("OnClick", function()
+        Store.SetSortColumn(header.key)
+        UI.RefreshRoster()
+      end)
+    end
 
     frame.rosterHeaders[#frame.rosterHeaders + 1] = button
   end

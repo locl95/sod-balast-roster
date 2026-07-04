@@ -828,12 +828,6 @@ local DEFAULT_SORT_COLUMN = "lastSeen"
 -- descendente se obtiene invirtiendo los argumentos, así un segundo click
 -- siempre invierte exactamente lo que el primero produjo.
 local SORT_COMPARATORS = {
-  addon = function(left, right)
-    if left.hasAddon ~= right.hasAddon then
-      return left.hasAddon
-    end
-    return left.name < right.name
-  end,
   name = function(left, right)
     return left.name < right.name
   end,
@@ -849,31 +843,9 @@ local SORT_COMPARATORS = {
     end
     return left.name < right.name
   end,
-  spec = function(left, right)
-    local leftSpec = tostring(left.specIcon or "")
-    local rightSpec = tostring(right.specIcon or "")
-    if leftSpec ~= rightSpec then
-      return leftSpec < rightSpec
-    end
-    return left.name < right.name
-  end,
   zone = function(left, right)
     if (left.zone or "") ~= (right.zone or "") then
       return (left.zone or "") < (right.zone or "")
-    end
-    return left.name < right.name
-  end,
-  guild = function(left, right)
-    if (left.guildName or "") ~= (right.guildName or "") then
-      return (left.guildName or "") < (right.guildName or "")
-    end
-    return left.name < right.name
-  end,
-  profs = function(left, right)
-    local leftProf = left.profession1 ~= "" and left.profession1 or (left.profession2 or "")
-    local rightProf = right.profession1 ~= "" and right.profession1 or (right.profession2 or "")
-    if leftProf ~= rightProf then
-      return leftProf < rightProf
     end
     return left.name < right.name
   end,
