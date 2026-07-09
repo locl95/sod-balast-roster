@@ -144,6 +144,30 @@ function ChatAlert.Create()
     GameTooltip:AddLine("Click to open chat", 0.8, 0.8, 0.8)
     GameTooltip:AddLine("Right-click to invite or whisper", 0.8, 0.8, 0.8)
     GameTooltip:AddLine("Shift-drag to move", 0.8, 0.8, 0.8)
+
+    local onlineMembers = {}
+    for _, member in pairs(Store.GetRoster()) do
+      if member.isOnlineInChannel then
+        onlineMembers[#onlineMembers + 1] = member
+      end
+    end
+
+    if #onlineMembers > 0 then
+      table.sort(onlineMembers, function(left, right)
+        return (left.name or "") < (right.name or "")
+      end)
+
+      GameTooltip:AddLine("----------------------------------------", 0.4, 0.4, 0.4)
+      GameTooltip:AddDoubleLine("Lvl  Name", "Location", 0.6, 0.6, 0.6, 0.6, 0.6, 0.6)
+
+      for _, member in ipairs(onlineMembers) do
+        local levelText = member.level and member.level > 0 and tostring(member.level) or "?"
+        local nameColumn = string.format("%-3s  %s", levelText, member.name or "?")
+        local zoneText = member.zone ~= "" and member.zone or "?"
+        GameTooltip:AddDoubleLine(nameColumn, zoneText, 1, 1, 1, 0.8, 0.8, 0.8)
+      end
+    end
+
     GameTooltip:Show()
   end)
   frame:SetScript("OnLeave", function()
