@@ -958,6 +958,19 @@ function Store.GetOnlineAddonMembers()
   return names
 end
 
+function Store.GetOnlineMembers()
+  local names = {}
+
+  for _, member in pairs(Store.GetRoster()) do
+    if member.isOnlineInChannel and member.name ~= Utils.PlayerName() then
+      names[#names + 1] = member.name
+    end
+  end
+
+  table.sort(names)
+  return names
+end
+
 function Store.SelectSyncDonors(maxCount)
   local donors = {}
 

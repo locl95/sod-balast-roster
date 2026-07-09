@@ -29,6 +29,11 @@ local ROSTER_HEADERS = {
 
 local lastRefreshAt = 0
 
+local hideOnlineMenu
+local scheduleOnlineMenuHide
+local cancelOnlineMenuHide
+local colorizeName
+
 StaticPopupDialogs["SODBALASTROSTER_PURGE_LEGACY"] = {
   text = "Delete old roster data saved before per-server storage, and entries synced from other servers? This cannot be undone.",
   button1 = "Delete",
@@ -157,6 +162,9 @@ local function ensureContextMenuDismissOverlay()
   overlay:RegisterForClicks("AnyUp")
   overlay:SetScript("OnClick", function()
     hideContextMenu(true)
+    if hideOnlineMenu then
+      hideOnlineMenu(true)
+    end
   end)
   overlay:Hide()
 
@@ -164,15 +172,20 @@ local function ensureContextMenuDismissOverlay()
   return overlay
 end
 
-local function showContextMenuDismissOverlay(menu)
+local function showContextMenuDismissOverlay(menus)
   local overlay = ensureContextMenuDismissOverlay()
   overlay:SetFrameStrata("FULLSCREEN_DIALOG")
   overlay:SetFrameLevel(0)
   overlay:Show()
 
-  if menu then
-    menu:SetFrameStrata("FULLSCREEN_DIALOG")
-    menu:SetFrameLevel(overlay:GetFrameLevel() + 1)
+  if not menus then
+    return
+  end
+
+  local frames = menus.SetFrameStrata and { menus } or menus
+  for index, frame in ipairs(frames) do
+    frame:SetFrameStrata("FULLSCREEN_DIALOG")
+    frame:SetFrameLevel(overlay:GetFrameLevel() + index)
   end
 end
 
@@ -280,6 +293,10 @@ local function ensureContextMenu()
 end
 
 local function openFallbackMenu(anchor, member)
+  if hideOnlineMenu then
+    hideOnlineMenu(false)
+  end
+
   local menu = ensureContextMenu()
   menu.member = member
   menu.title:SetText(member.name or "?")
@@ -309,6 +326,288 @@ local function openNameMenu(anchor, member)
   end
 
   openFallbackMenu(anchor, member)
+end
+
+local ONLINE_FLYOUT_MAX_ROWS = 20
+local ONLINE_FLYOUT_ROW_HEIGHT = 18
+local ONLINE_FLYOUT_WIDTH = 170
+
+hideOnlineMenu = function(deferred)
+  if not UI.onlineMenu then
+    return
+  end
+
+  if not deferred then
+    UI.onlineMenu:Hide()
+    return
+  end
+
+  if UI.onlineMenuHidePending then
+    return
+  end
+
+  UI.onlineMenuHidePending = true
+  C_Timer.After(0, function()
+    UI.onlineMenuHidePending = nil
+    if UI.onlineMenu and UI.onlineMenu:IsShown() then
+      UI.onlineMenu:Hide()
+    end
+  end)
+end
+
+local function isMouseOverOnlineMenuGroup()
+  if UI.onlineMenu and UI.onlineMenu:IsShown() and MouseIsOver(UI.onlineMenu) then
+    return true
+  end
+
+  if UI.onlineSubmenu and UI.onlineSubmenu:IsShown() and MouseIsOver(UI.onlineSubmenu) then
+    return true
+  end
+
+  return false
+end
+
+scheduleOnlineMenuHide = function()
+  UI.onlineMenuHideGeneration = (UI.onlineMenuHideGeneration or 0) + 1
+  local generation = UI.onlineMenuHideGeneration
+
+  C_Timer.After(0.15, function()
+    if UI.onlineMenuHideGeneration ~= generation then
+      return
+    end
+
+    if isMouseOverOnlineMenuGroup() then
+      return
+    end
+
+    hideOnlineMenu(true)
+  end)
+end
+
+cancelOnlineMenuHide = function()
+  UI.onlineMenuHideGeneration = (UI.onlineMenuHideGeneration or 0) + 1
+end
+
+local function performOnlineMenuAction(action, name)
+  if not name or name == "" then
+    return
+  end
+
+  if action == "invite" then
+    InviteUnit(name)
+  elseif action == "whisper" then
+    ChatFrame_SendTell(name)
+  end
+
+  hideOnlineMenu(true)
+end
+
+local function ensureOnlineSubmenu()
+  if UI.onlineSubmenu then
+    return UI.onlineSubmenu
+  end
+
+  local submenu = CreateFrame("Frame", "SodBalastRosterOnlineSubmenu", UIParent, BackdropTemplateMixin and "BackdropTemplate")
+  submenu:SetFrameStrata("FULLSCREEN_DIALOG")
+  submenu:SetToplevel(true)
+  submenu:SetClampedToScreen(true)
+  submenu:EnableMouse(true)
+  submenu:SetSize(ONLINE_FLYOUT_WIDTH, 40)
+
+  if submenu.SetBackdrop then
+    submenu:SetBackdrop({
+      bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+      edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+      tile = true,
+      tileSize = 16,
+      edgeSize = 16,
+      insets = { left = 4, right = 4, top = 4, bottom = 4 },
+    })
+    submenu:SetBackdropColor(0.05, 0.05, 0.05, 0.96)
+    submenu:SetBackdropBorderColor(0.6, 0.6, 0.6, 1)
+  end
+
+  submenu.emptyLabel = submenu:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+  submenu.emptyLabel:SetPoint("TOPLEFT", submenu, "TOPLEFT", 10, -10)
+  submenu.emptyLabel:SetText("No one online")
+  submenu.emptyLabel:Hide()
+
+  submenu.moreLabel = submenu:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+  submenu.moreLabel:SetJustifyH("LEFT")
+  submenu.moreLabel:Hide()
+
+  submenu.rows = {}
+  for index = 1, ONLINE_FLYOUT_MAX_ROWS do
+    local button = CreateFrame("Button", nil, submenu)
+    button:SetSize(ONLINE_FLYOUT_WIDTH - 20, ONLINE_FLYOUT_ROW_HEIGHT)
+    button:SetPoint("TOPLEFT", submenu, "TOPLEFT", 10, -10 - ((index - 1) * ONLINE_FLYOUT_ROW_HEIGHT))
+    button:EnableMouse(true)
+    button:RegisterForClicks("LeftButtonUp")
+
+    button.label = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    button.label:SetAllPoints(button)
+    button.label:SetJustifyH("LEFT")
+
+    button:SetScript("OnEnter", function(self)
+      cancelOnlineMenuHide()
+      self.label:SetTextColor(1, 0.82, 0)
+    end)
+    button:SetScript("OnLeave", function(self)
+      self.label:SetTextColor(1, 1, 1)
+      scheduleOnlineMenuHide()
+    end)
+    button:SetScript("OnClick", function(self)
+      performOnlineMenuAction(submenu.action, self.memberName)
+    end)
+
+    submenu.rows[index] = button
+  end
+
+  submenu:SetScript("OnEnter", cancelOnlineMenuHide)
+  submenu:SetScript("OnLeave", scheduleOnlineMenuHide)
+
+  UI.onlineSubmenu = submenu
+  return submenu
+end
+
+local function populateOnlineSubmenu(anchorButton, action)
+  local submenu = ensureOnlineSubmenu()
+  submenu.action = action
+
+  local names = Store.GetOnlineMembers()
+  local count = math.min(#names, ONLINE_FLYOUT_MAX_ROWS)
+
+  for index, row in ipairs(submenu.rows) do
+    if index <= count then
+      local name = names[index]
+      row.memberName = name
+      row.label:SetTextColor(1, 1, 1)
+      row.label:SetText(colorizeName(name))
+      row:Show()
+    else
+      row.memberName = nil
+      row:Hide()
+    end
+  end
+
+  submenu.emptyLabel:SetShown(count == 0)
+
+  local extra = #names - count
+  local lineCount = count > 0 and count or 1
+
+  if extra > 0 then
+    submenu.moreLabel:SetText(string.format("+%d more", extra))
+    submenu.moreLabel:ClearAllPoints()
+    submenu.moreLabel:SetPoint("TOPLEFT", submenu, "TOPLEFT", 10, -10 - (count * ONLINE_FLYOUT_ROW_HEIGHT))
+    submenu.moreLabel:Show()
+    lineCount = lineCount + 1
+  else
+    submenu.moreLabel:Hide()
+  end
+
+  submenu:SetHeight(20 + (lineCount * ONLINE_FLYOUT_ROW_HEIGHT))
+
+  submenu:ClearAllPoints()
+  submenu:SetPoint("TOPLEFT", anchorButton, "TOPRIGHT", 2, 0)
+  showContextMenuDismissOverlay({ UI.onlineMenu, submenu })
+  submenu:Show()
+end
+
+local ONLINE_MENU_ACTIONS = {
+  { key = "invite", text = "Invite >" },
+  { key = "whisper", text = "Whisper >" },
+}
+
+local function ensureOnlineMenu()
+  if UI.onlineMenu then
+    return UI.onlineMenu
+  end
+
+  local menu = CreateFrame("Frame", "SodBalastRosterOnlineMenu", UIParent, BackdropTemplateMixin and "BackdropTemplate")
+  menu:SetFrameStrata("FULLSCREEN_DIALOG")
+  menu:SetToplevel(true)
+  menu:SetClampedToScreen(true)
+  menu:EnableMouse(true)
+  menu:SetSize(130, 64)
+
+  if menu.SetBackdrop then
+    menu:SetBackdrop({
+      bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+      edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+      tile = true,
+      tileSize = 16,
+      edgeSize = 16,
+      insets = { left = 4, right = 4, top = 4, bottom = 4 },
+    })
+    menu:SetBackdropColor(0.05, 0.05, 0.05, 0.96)
+    menu:SetBackdropBorderColor(0.6, 0.6, 0.6, 1)
+  end
+
+  menu.buttons = {}
+  for index, action in ipairs(ONLINE_MENU_ACTIONS) do
+    local button = CreateFrame("Button", nil, menu, "UIPanelButtonTemplate")
+    button:SetSize(106, 20)
+    button:SetPoint("TOPLEFT", menu, "TOPLEFT", 10, -10 - ((index - 1) * 24))
+    button:SetText(action.text)
+    button.actionKey = action.key
+    button:SetScript("OnEnter", function(self)
+      cancelOnlineMenuHide()
+      populateOnlineSubmenu(self, self.actionKey)
+    end)
+    button:SetScript("OnLeave", function()
+      scheduleOnlineMenuHide()
+    end)
+    menu.buttons[#menu.buttons + 1] = button
+  end
+
+  menu:SetScript("OnEnter", cancelOnlineMenuHide)
+  menu:SetScript("OnLeave", scheduleOnlineMenuHide)
+  menu:SetScript("OnMouseUp", function(_, button)
+    if button == "RightButton" then
+      hideOnlineMenu(true)
+    end
+  end)
+  menu:SetScript("OnKeyDown", function(self, key)
+    if key == "ESCAPE" then
+      self:Hide()
+    end
+  end)
+  menu:SetScript("OnShow", function(self)
+    self:EnableKeyboard(true)
+    self:SetPropagateKeyboardInput(false)
+  end)
+  menu:SetScript("OnHide", function(self)
+    UI.onlineMenuHidePending = nil
+    if UI.onlineSubmenu then
+      UI.onlineSubmenu:Hide()
+    end
+    if UI.contextMenuDismissOverlay then
+      UI.contextMenuDismissOverlay:Hide()
+    end
+    if self.SetPropagateKeyboardInput then
+      self:SetPropagateKeyboardInput(true)
+    end
+    self:EnableKeyboard(false)
+  end)
+
+  UI.onlineMenu = menu
+  return menu
+end
+
+local function openOnlineMenu(anchor)
+  hideContextMenu(false)
+
+  local menu = ensureOnlineMenu()
+
+  local scale = UIParent:GetEffectiveScale()
+  local x, y = GetCursorPosition()
+  x = x / scale
+  y = y / scale
+
+  menu:ClearAllPoints()
+  menu:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x + 8, y + 8)
+  showContextMenuDismissOverlay(menu)
+  menu:Show()
 end
 
 local function getClassColor(classFile)
@@ -353,7 +652,7 @@ local function getProfessionIconsText(member)
   return nil
 end
 
-local function colorizeName(name)
+colorizeName = function(name)
   local member = Store.GetMember(name)
   local classColor = member and getClassColor(member.classFile) or nil
   if not classColor then
@@ -959,6 +1258,16 @@ function UI.Create()
   frame.status = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   frame.status:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -64)
   frame.status:SetText("")
+
+  frame.statusButton = CreateFrame("Button", nil, frame)
+  frame.statusButton:SetAllPoints(frame.status)
+  frame.statusButton:EnableMouse(true)
+  frame.statusButton:RegisterForClicks("RightButtonUp")
+  frame.statusButton:SetScript("OnClick", function(self, button)
+    if button == "RightButton" then
+      openOnlineMenu(self)
+    end
+  end)
 
   frame.emptyState = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   frame.emptyState:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -140)
