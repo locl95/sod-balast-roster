@@ -444,16 +444,21 @@ local function ensureOnlineSubmenu()
     button:EnableMouse(true)
     button:RegisterForClicks("LeftButtonUp")
 
+    button.highlight = button:CreateTexture(nil, "BACKGROUND")
+    button.highlight:SetAllPoints(button)
+    button.highlight:SetColorTexture(1, 0.82, 0.2, 0.22)
+    button.highlight:Hide()
+
     button.label = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     button.label:SetAllPoints(button)
     button.label:SetJustifyH("LEFT")
 
     button:SetScript("OnEnter", function(self)
       cancelOnlineMenuHide()
-      self.label:SetTextColor(1, 0.82, 0)
+      self.highlight:Show()
     end)
     button:SetScript("OnLeave", function(self)
-      self.label:SetTextColor(1, 1, 1)
+      self.highlight:Hide()
       scheduleOnlineMenuHide()
     end)
     button:SetScript("OnClick", function(self)
@@ -594,7 +599,7 @@ local function ensureOnlineMenu()
   return menu
 end
 
-local function openOnlineMenu(anchor)
+function UI.OpenOnlineMenu(anchor)
   hideContextMenu(false)
 
   local menu = ensureOnlineMenu()
@@ -1258,16 +1263,6 @@ function UI.Create()
   frame.status = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   frame.status:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -64)
   frame.status:SetText("")
-
-  frame.statusButton = CreateFrame("Button", nil, frame)
-  frame.statusButton:SetAllPoints(frame.status)
-  frame.statusButton:EnableMouse(true)
-  frame.statusButton:RegisterForClicks("RightButtonUp")
-  frame.statusButton:SetScript("OnClick", function(self, button)
-    if button == "RightButton" then
-      openOnlineMenu(self)
-    end
-  end)
 
   frame.emptyState = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   frame.emptyState:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -140)

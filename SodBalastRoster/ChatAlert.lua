@@ -51,7 +51,7 @@ function ChatAlert.Create()
   frame:SetPoint(state.point or "TOPRIGHT", UIParent, state.relativePoint or state.point or "TOPRIGHT", state.x or -220, state.y or -120)
   frame:SetMovable(true)
   frame:EnableMouse(true)
-  frame:RegisterForClicks("LeftButtonUp")
+  frame:RegisterForClicks("LeftButtonUp", "RightButtonUp")
   if frame.SetBackdrop then
     frame:SetBackdrop({
       bgFile = "Interface/Tooltips/UI-Tooltip-Background",
@@ -113,7 +113,14 @@ function ChatAlert.Create()
       Store.SaveChatAlertPosition(self)
     end
   end)
-  frame:SetScript("OnClick", function()
+  frame:SetScript("OnClick", function(self, button)
+    if button == "RightButton" then
+      if ns.UI and ns.UI.OpenOnlineMenu then
+        ns.UI.OpenOnlineMenu(self)
+      end
+      return
+    end
+
     if frame.justDragged then
       frame.justDragged = false
       return
@@ -135,6 +142,7 @@ function ChatAlert.Create()
       GameTooltip:AddLine("New messages pending", 1, 0.82, 0.3)
     end
     GameTooltip:AddLine("Click to open chat", 0.8, 0.8, 0.8)
+    GameTooltip:AddLine("Right-click to invite or whisper", 0.8, 0.8, 0.8)
     GameTooltip:AddLine("Shift-drag to move", 0.8, 0.8, 0.8)
     GameTooltip:Show()
   end)
