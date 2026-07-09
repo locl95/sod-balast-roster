@@ -512,8 +512,18 @@ local function populateOnlineSubmenu(anchorButton, action)
 
   submenu:SetHeight(20 + (lineCount * ONLINE_FLYOUT_ROW_HEIGHT))
 
+  local menu = UI.onlineMenu
+  local menuRight = menu and menu:GetRight() or anchorButton:GetRight()
+  local screenRight = UIParent:GetRight() or GetScreenWidth()
+  local fitsOnRight = menuRight and screenRight and (menuRight + 4 + ONLINE_FLYOUT_WIDTH) <= screenRight
+
   submenu:ClearAllPoints()
-  submenu:SetPoint("TOPLEFT", anchorButton, "TOPRIGHT", 2, 0)
+  if fitsOnRight then
+    submenu:SetPoint("TOPLEFT", anchorButton, "TOPRIGHT", 2, 0)
+  else
+    submenu:SetPoint("TOPRIGHT", anchorButton, "TOPLEFT", -2, 0)
+  end
+
   showContextMenuDismissOverlay({ UI.onlineMenu, submenu })
   submenu:Show()
 end
