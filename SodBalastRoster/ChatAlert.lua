@@ -7,6 +7,48 @@ local ChatAlert = {
 }
 ns.ChatAlert = ChatAlert
 
+local function getClassColorHex(classFile)
+  local colors = CUSTOM_CLASS_COLORS or RAID_CLASS_COLORS
+  local color = colors and colors[classFile or ""]
+  if not color then
+    return "ffffff"
+  end
+
+  return string.format("%02x%02x%02x",
+    math.floor((color.r or 1) * 255),
+    math.floor((color.g or 1) * 255),
+    math.floor((color.b or 1) * 255)
+  )
+end
+
+local function getLevelColorHex(level)
+  if not level or level <= 0 then
+    return "ffffff"
+  end
+
+  if GetCreatureDifficultyColor then
+    local color = GetCreatureDifficultyColor(level)
+    if color then
+      return string.format("%02x%02x%02x",
+        math.floor(color.r * 255),
+        math.floor(color.g * 255),
+        math.floor(color.b * 255)
+      )
+    end
+  end
+
+  local diff = level - (UnitLevel("player") or level)
+  if diff <= -5 then
+    return "9d9d9d"
+  elseif diff <= 2 then
+    return "1eff00"
+  elseif diff <= 4 then
+    return "ffff00"
+  else
+    return "ff1a1a"
+  end
+end
+
 local function getOnlineCount()
   local count = 0
 
@@ -158,11 +200,12 @@ function ChatAlert.Create()
       end)
 
       GameTooltip:AddLine("----------------------------------------", 0.4, 0.4, 0.4)
-      GameTooltip:AddDoubleLine("Lvl  Name", "Location", 0.6, 0.6, 0.6, 0.6, 0.6, 0.6)
 
       for _, member in ipairs(onlineMembers) do
         local levelText = member.level and member.level > 0 and tostring(member.level) or "?"
-        local nameColumn = string.format("%-3s  %s", levelText, member.name or "?")
+        local levelHex = getLevelColorHex(member.level)
+        local nameHex = getClassColorHex(member.classFile)
+        local nameColumn = string.format("|cff%s%-3s|r  |cff%s%s|r", levelHex, levelText, nameHex, member.name or "?")
         local zoneText = member.zone ~= "" and member.zone or "?"
         GameTooltip:AddDoubleLine(nameColumn, zoneText, 1, 1, 1, 0.8, 0.8, 0.8)
       end
